@@ -1,4 +1,5 @@
 #pragma once
+
 /*
  * This creepy C++ code is taking from google / stackoverflow
  * I don't want to read it even

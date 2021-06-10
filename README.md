@@ -1,0 +1,3 @@
+# shelter
+
+I HATE C++

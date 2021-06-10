@@ -1,0 +1,5 @@
+- target: /home/pytorch
+  upstream: origin main
+  vcs: git
+  task: pull
+  branch: main

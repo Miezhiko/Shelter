@@ -1,7 +1,7 @@
 #pragma once
 
 /*
- * This creepy C++ code is taking from google / stackoverflow
+ * This creepy C++ code was taken from google / stackoverflow
  * I don't want to read it even
  * C++ is shitty language, don't use C++
  * Here link: https://stackoverflow.com/questions/478898/how-do-i-execute-a-command-and-get-the-output-of-the-command-within-c-using-po

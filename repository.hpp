@@ -46,11 +46,11 @@ class Repository {
     }
     return false;
   }
-  std::string target() const { return args.target; }
-  std::string upstream() const { return args.upstream; }
-  std::string branch() const { return args.branch; }
-  std::string repo_hash() const { return hash; }
-  bool is_hash_updated() const { return hash_updated; }
+  std::string target() const    { return args.target;   }
+  std::string upstream() const  { return args.upstream; }
+  std::string branch() const    { return args.branch;   }
+  std::string repo_hash() const { return hash;          }
+  bool is_hash_updated() const  { return hash_updated;  }
   void set_hash(std::string h) {
     if (hash != h) {
       std::cout << "new hash: " << h << std::endl;
@@ -58,8 +58,8 @@ class Repository {
       hash_updated = true;
     }
   }
-  virtual void pull(const std::shared_ptr<GlobalOptions>&) {};
-  virtual void rebase(const std::shared_ptr<GlobalOptions>&) {};
+  virtual void pull   (const std::shared_ptr<GlobalOptions>&) {};
+  virtual void rebase (const std::shared_ptr<GlobalOptions>&) {};
   void process(const std::shared_ptr<GlobalOptions>& opts) {
     switch (args.action) {
       case Action::Pull: {
@@ -92,6 +92,6 @@ class Repo : public Repository {
   public:
   Repo(const RepoArgs& a, std::string h)
     : Repository(a, h) {};
-  virtual void pull(const std::shared_ptr<GlobalOptions>&);
-  virtual void rebase(const std::shared_ptr<GlobalOptions>&);
+  virtual void pull   (const std::shared_ptr<GlobalOptions>&);
+  virtual void rebase (const std::shared_ptr<GlobalOptions>&);
 };

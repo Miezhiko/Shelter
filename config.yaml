@@ -3,3 +3,23 @@
   vcs: git
   task: pull
   branch: main
+- target: /home/nvidia-docker-overlay
+  upstream: origin master
+  vcs: git
+  task: pull
+  branch: master
+- target: /home/sci
+  upstream: origin master
+  vcs: git
+  task: pull
+  branch: master
+- target: /home/gentoo-haskell
+  upstream: origin master
+  vcs: git
+  task: pull
+  branch: master
+- target: /home/mawa
+  upstream: origin mawa
+  vcs: git
+  task: pull
+  branch: mawa

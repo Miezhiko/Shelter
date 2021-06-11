@@ -1,5 +1,6 @@
 #pragma once
 
+#include "options.hpp"
 #include "execute.hpp"
 
 #include <iostream>
@@ -16,11 +17,11 @@ static std::unordered_map<std::string, Action> const STRACTION =
 class RepoArgs {
   std::string target;
   std::string upstream;
+  std::string branch;
   Action action;
   public:
-  RepoArgs(std::string t, std::string a, std::string u) {
-    target = t;
-    upstream = u;
+  RepoArgs(std::string t, std::string a, std::string u, std::string b)
+    : target(t), upstream(u), branch(b) {
     const auto it = STRACTION.find(a);
     if (it != STRACTION.end()) {
       action = it->second;
@@ -38,13 +39,33 @@ class Repository {
   }
   public:
   Repository(RepoArgs& a) : args(a) {};
-  void navigate() const {
-    std::filesystem::current_path(args.target);
+  bool navigate() const {
+    if (std::filesystem::exists(args.target)) {
+      std::filesystem::current_path(args.target);
+      return true;
+    }
+    return false;
   }
   std::string upstream() const {
     return args.upstream;
   }
-  virtual void pull() const {};
+  std::string branch() const {
+    return args.branch;
+  }
+  virtual void pull(const std::shared_ptr<GlobalOptions>& opts) const {};
+  virtual void rebase(const std::shared_ptr<GlobalOptions>& opts) const {};
+  void process(const std::shared_ptr<GlobalOptions>& opts) const {
+    switch (args.action) {
+      case Action::Pull: {
+        pull(opts);
+        break;
+      }
+      case Action::Rebase: {
+        rebase(opts);
+        break;
+      }
+    }
+  }
   friend std::ostream& operator<< (std::ostream& os, const Repository& r) {
     os << r.target();
     return os;
@@ -53,6 +74,7 @@ class Repository {
     os << r->target();
     return os;
   }
+  virtual ~Repository() {};
 };
 
 template <VCS G>
@@ -60,14 +82,6 @@ class Repo : public Repository {
   public:
   Repo(RepoArgs& a)
     : Repository(a) {};
-  virtual void pull() const;
+  virtual void pull(const std::shared_ptr<GlobalOptions>& opts) const;
+  virtual void rebase(const std::shared_ptr<GlobalOptions>& opts) const;
 };
-
-template <> void Repo <VCS::Git> :: pull () const {
-  std::string pull_cmd = "git pull " + upstream();
-  exec(pull_cmd.c_str());
-}
-
-template <> void Repo <VCS::Pijul> :: pull () const {
-  std::cout << "pijul" << std::endl;
-}

@@ -18,6 +18,7 @@ class RepoArgs {
   std::string target;
   std::string upstream;
   std::string branch;
+  std::string hash;
   Action action;
   public:
   RepoArgs(std::string t, std::string a, std::string u, std::string b)
@@ -28,6 +29,10 @@ class RepoArgs {
     } else {
       action = Action::Unkown;
     }
+  }
+  RepoArgs(std::string t, std::string a, std::string u, std::string b, std::string h)
+    : RepoArgs(t, a, u, b) {
+    hash = h;
   }
   friend class Repository;
 };

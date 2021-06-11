@@ -3,7 +3,12 @@ namespace {
     std::string rev_parse = exec("git rev-parse --abbrev-ref HEAD");
     rev_parse.erase(std::remove(rev_parse.begin(), rev_parse.end(), '\n'), rev_parse.end());
     return rev_parse;
-  }
+  }/*
+  std::string get_hash() {
+    std::string rev_parse = exec("git log -n 1 --pretty=format:%H");
+    rev_parse.erase(std::remove(rev_parse.begin(), rev_parse.end(), '\n'), rev_parse.end());
+    return rev_parse;
+  }*/
 }
 
 template <> void Repo <VCS::Git> :: pull (
@@ -15,6 +20,7 @@ template <> void Repo <VCS::Git> :: pull (
   }
 
   if (opts->do_clean()) {
+    exec("git reset --hard");
     exec("git clean -fxd");
   }
 
@@ -31,9 +37,13 @@ template <> void Repo <VCS::Git> :: rebase (
   }
 
   if (opts->do_clean()) {
+    exec("git reset --hard");
     exec("git clean -fxd");
   }
 
   std::string pull_cmd = "git pull --rebase " + upstream();
   exec(pull_cmd.c_str());
+
+  std::string push_cmd = "git push --force origin " + branch();
+  exec(push_cmd.c_str());
 }

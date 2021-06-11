@@ -1,5 +1,7 @@
 # Shelter
 
+[![Build Status](https://github.com/Qeenon/Shelter/actions/workflows/cmake.yml/badge.svg)](https://github.com/Qeenon/Shelter/actions/workflows/cmake.yml)
+
 Simple stupid script to update code in number of directories
 
 ```cpp

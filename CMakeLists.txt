@@ -35,7 +35,7 @@ else()
   set_target_properties(yaml-cpp PROPERTIES
     IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/prefix/lib/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX}
   )
-fi()
+endif()
 
 include_directories(SYSTEM "${PROJECT_BINARY_DIR}/prefix/include")
 

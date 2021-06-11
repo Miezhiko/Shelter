@@ -84,23 +84,33 @@ int main() {
   if (std::filesystem::exists(CONFIG_FILE)) {
     auto config = YAML::LoadFile(CONFIG_FILE);
     auto repositories = parse_config(config);
+
     const auto cwd = std::filesystem::current_path();
+    bool some_hash_was_updated = false;
+
     for (auto &repo : repositories) {
       std::cout << "processing: " << repo << std::endl;
       process(repo, otpions);
-      // Update hash
-      for (YAML::iterator it = config.begin(); it != config.end(); ++it) {
-        const YAML::Node& node = *it;
-        if (node["target"] && node["task"] && node["upstream"] && node["branch"]) {
-          const auto target_str = node["target"].as<std::string>();
-          if (target_str == repo->target()) {
-            (*it)["hash"] = repo->repo_hash();
+      if (repo->is_hash_updated()) {
+        for (YAML::iterator it = config.begin(); it != config.end(); ++it) {
+          const YAML::Node& node = *it;
+          if (node["target"]) {
+            const auto target_str = node["target"].as<std::string>();
+            if (target_str == repo->target()) {
+              (*it)["hash"] = repo->repo_hash();
+              if (!some_hash_was_updated) {
+                some_hash_was_updated = true;
+              }
+            }
           }
         }
       }
     }
-    std::filesystem::current_path(cwd);
-    save_config(config, CONFIG_FILE);
+
+    if (some_hash_was_updated) {
+      std::filesystem::current_path(cwd);
+      save_config(config, CONFIG_FILE);
+    }
   }
   return 0;
 }

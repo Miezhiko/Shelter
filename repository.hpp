@@ -35,8 +35,10 @@ class RepoArgs {
 class Repository {
   RepoArgs args;
   std::string hash;
+  bool hash_updated;
   public:
-  Repository(const RepoArgs& a, std::string h) : args(a), hash(h) {};
+  Repository(const RepoArgs& a, std::string h)
+    : args(a), hash(h), hash_updated(false) {};
   bool navigate() const {
     if (std::filesystem::exists(args.target)) {
       std::filesystem::current_path(args.target);
@@ -48,9 +50,13 @@ class Repository {
   std::string upstream() const { return args.upstream; }
   std::string branch() const { return args.branch; }
   std::string repo_hash() const { return hash; }
+  bool is_hash_updated() const { return hash_updated; }
   void set_hash(std::string h) {
-    std::cout << "new hash: " << h << std::endl;
-    hash = h;
+    if (hash != h) {
+      std::cout << "new hash: " << h << std::endl;
+      hash = h;
+      hash_updated = true;
+    }
   }
   virtual void pull(const std::shared_ptr<GlobalOptions>&) {};
   virtual void rebase(const std::shared_ptr<GlobalOptions>&) {};

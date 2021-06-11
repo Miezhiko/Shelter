@@ -18,14 +18,10 @@ class RepoArgs {
   std::string target;
   std::string upstream;
   std::string branch;
-  std::string hash;
   Action action;
   public:
-  void set_hash(std::string h) {
-    hash = h;
-  }
   RepoArgs(std::string t, std::string a, std::string u, std::string b)
-    : target(t), upstream(u), branch(b), hash("") {
+    : target(t), upstream(u), branch(b) {
     const auto it = STRACTION.find(a);
     if (it != STRACTION.end()) {
       action = it->second;
@@ -33,20 +29,14 @@ class RepoArgs {
       action = Action::Unkown;
     }
   }
-  RepoArgs(std::string t, std::string a, std::string u, std::string b, std::string h)
-    : RepoArgs(t, a, u, b) {
-    hash = h;
-  }
   friend class Repository;
 };
 
 class Repository {
   RepoArgs args;
-  std::string target() const {
-    return args.target;
-  }
+  std::string hash;
   public:
-  Repository(RepoArgs& a) : args(a) {};
+  Repository(const RepoArgs& a, std::string h) : args(a), hash(h) {};
   bool navigate() const {
     if (std::filesystem::exists(args.target)) {
       std::filesystem::current_path(args.target);
@@ -54,12 +44,17 @@ class Repository {
     }
     return false;
   }
+  std::string target() const { return args.target; }
   std::string upstream() const { return args.upstream; }
   std::string branch() const { return args.branch; }
-  std::string hash() const { return args.hash; }
-  virtual void pull(const std::shared_ptr<GlobalOptions>&) const {};
-  virtual void rebase(const std::shared_ptr<GlobalOptions>&) const {};
-  void process(const std::shared_ptr<GlobalOptions>& opts) const {
+  std::string repo_hash() const { return hash; }
+  void set_hash(std::string h) {
+    std::cout << "new hash: " << h << std::endl;
+    hash = h;
+  }
+  virtual void pull(const std::shared_ptr<GlobalOptions>&) {};
+  virtual void rebase(const std::shared_ptr<GlobalOptions>&) {};
+  void process(const std::shared_ptr<GlobalOptions>& opts) {
     switch (args.action) {
       case Action::Pull: {
         pull(opts);
@@ -89,8 +84,8 @@ class Repository {
 template <VCS G>
 class Repo : public Repository {
   public:
-  Repo(RepoArgs& a)
-    : Repository(a) {};
-  virtual void pull(const std::shared_ptr<GlobalOptions>&) const;
-  virtual void rebase(const std::shared_ptr<GlobalOptions>&) const;
+  Repo(const RepoArgs& a, std::string h)
+    : Repository(a, h) {};
+  virtual void pull(const std::shared_ptr<GlobalOptions>&);
+  virtual void rebase(const std::shared_ptr<GlobalOptions>&);
 };

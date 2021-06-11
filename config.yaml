@@ -3,23 +3,28 @@
   vcs: git
   task: pull
   branch: main
+  hash: f5625e030082f24616a542d60ae4e4ebeb662838
 - target: /home/nvidia-docker-overlay
   upstream: origin master
   vcs: git
   task: pull
   branch: master
+  hash: fe211951abba69a59a3289f7f4c0f27bceaf1630
 - target: /home/sci
   upstream: origin master
   vcs: git
   task: pull
   branch: master
+  hash: 8cde5c549479110f27e426f97ee6011542423ceb
 - target: /home/gentoo-haskell
   upstream: origin master
   vcs: git
   task: pull
   branch: master
+  hash: c8076defd01cb3bd5a229b83c23fdcd9b5acd32a
 - target: /home/mawa
   upstream: origin mawa
   vcs: git
   task: pull
   branch: mawa
+  hash: dfff5b3b464524b4fdc6381d77adf16cfd5106e1

@@ -5,6 +5,14 @@ include(ExternalProject)
 
 project (shelter)
 
+if (MSVC)
+  # warning level 4 and all warnings as errors
+  add_compile_options(/W4 /WX)
+else()
+  # lots of warnings and all warnings as errors
+  add_compile_options(-Wall -Wextra -pedantic -Werror)
+endif()
+
 ExternalProject_Add(yaml_cpp
   GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git"
   SOURCE_DIR yaml-cpp

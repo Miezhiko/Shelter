@@ -68,7 +68,7 @@ int main() {
   }
   if (std::filesystem::exists(CONFIG_FILE)) {
     const auto repositories = parse_config(CONFIG_FILE);
-    for(const auto repo : repositories) {
+    for(const auto &repo : repositories) {
       std::cout << "processing: " << repo << std::endl;
       process(repo, otpions);
     }

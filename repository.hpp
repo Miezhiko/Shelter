@@ -52,8 +52,8 @@ class Repository {
   std::string branch() const {
     return args.branch;
   }
-  virtual void pull(const std::shared_ptr<GlobalOptions>& opts) const {};
-  virtual void rebase(const std::shared_ptr<GlobalOptions>& opts) const {};
+  virtual void pull(const std::shared_ptr<GlobalOptions>&) const {};
+  virtual void rebase(const std::shared_ptr<GlobalOptions>&) const {};
   void process(const std::shared_ptr<GlobalOptions>& opts) const {
     switch (args.action) {
       case Action::Pull: {
@@ -62,6 +62,10 @@ class Repository {
       }
       case Action::Rebase: {
         rebase(opts);
+        break;
+      }
+      case Action::Unkown: {
+        std::cout << "unknown task for " << this << std::endl;
         break;
       }
     }
@@ -82,6 +86,6 @@ class Repo : public Repository {
   public:
   Repo(RepoArgs& a)
     : Repository(a) {};
-  virtual void pull(const std::shared_ptr<GlobalOptions>& opts) const;
-  virtual void rebase(const std::shared_ptr<GlobalOptions>& opts) const;
+  virtual void pull(const std::shared_ptr<GlobalOptions>&) const;
+  virtual void rebase(const std::shared_ptr<GlobalOptions>&) const;
 };

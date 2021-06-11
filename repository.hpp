@@ -21,8 +21,11 @@ class RepoArgs {
   std::string hash;
   Action action;
   public:
+  void set_hash(std::string h) {
+    hash = h;
+  }
   RepoArgs(std::string t, std::string a, std::string u, std::string b)
-    : target(t), upstream(u), branch(b) {
+    : target(t), upstream(u), branch(b), hash("") {
     const auto it = STRACTION.find(a);
     if (it != STRACTION.end()) {
       action = it->second;
@@ -51,12 +54,9 @@ class Repository {
     }
     return false;
   }
-  std::string upstream() const {
-    return args.upstream;
-  }
-  std::string branch() const {
-    return args.branch;
-  }
+  std::string upstream() const { return args.upstream; }
+  std::string branch() const { return args.branch; }
+  std::string hash() const { return args.hash; }
   virtual void pull(const std::shared_ptr<GlobalOptions>&) const {};
   virtual void rebase(const std::shared_ptr<GlobalOptions>&) const {};
   void process(const std::shared_ptr<GlobalOptions>& opts) const {

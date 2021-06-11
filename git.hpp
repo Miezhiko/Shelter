@@ -3,12 +3,12 @@ namespace {
     std::string rev_parse = exec("git rev-parse --abbrev-ref HEAD");
     rev_parse.erase(std::remove(rev_parse.begin(), rev_parse.end(), '\n'), rev_parse.end());
     return rev_parse;
-  }/*
+  }
   std::string get_hash() {
     std::string rev_parse = exec("git log -n 1 --pretty=format:%H");
     rev_parse.erase(std::remove(rev_parse.begin(), rev_parse.end(), '\n'), rev_parse.end());
     return rev_parse;
-  }*/
+  }
 }
 
 template <> void Repo <VCS::Git> :: pull (
@@ -17,6 +17,11 @@ template <> void Repo <VCS::Git> :: pull (
   if (get_branch() != branch()) {
     std::string checkout_cmd = "git checkout " + branch();
     exec(checkout_cmd.c_str());
+  }
+
+  if (get_hash() == hash()) {
+    std::cout << "repository " << this << " is up to date" << std::endl;
+    return;
   }
 
   if (opts->do_clean()) {
@@ -34,6 +39,11 @@ template <> void Repo <VCS::Git> :: rebase (
   if (get_branch() != branch()) {
     std::string checkout_cmd = "git checkout " + branch();
     exec(checkout_cmd.c_str());
+  }
+
+  if (get_hash() == hash()) {
+    std::cout << "repository " << this << " is up to date" << std::endl;
+    return;
   }
 
   if (opts->do_clean()) {

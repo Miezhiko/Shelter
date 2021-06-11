@@ -23,13 +23,17 @@ std::shared_ptr<GlobalOptions> parse_options(const std::string& yaml_file) {
 std::vector<std::shared_ptr<Repository>> parse_config(const std::string& yaml_file) {
   std::vector<std::shared_ptr<Repository>> result;
   const auto config = YAML::LoadFile(yaml_file);
-  for(const auto node : config) {
-    if(node["target"] && node["task"] && node["upstream"] && node["branch"]) {
+  for (const auto node : config) {
+    if (node["target"] && node["task"] && node["upstream"] && node["branch"]) {
       const auto target_str   = node["target"].as<std::string>();
       const auto action_str   = node["task"].as<std::string>();
       const auto upstream_str = node["upstream"].as<std::string>();
       const auto branch_str   = node["branch"].as<std::string>();
       RepoArgs args( target_str, action_str, upstream_str, branch_str );
+      if (node["hash"]) {
+        const auto hash_str   = node["hash"].as<std::string>();
+        args.set_hash( hash_str );
+      }
       if(node["vcs"]) {
         const auto vcs = node["vcs"].as<std::string>();
         if (vcs == "git") {
@@ -53,7 +57,7 @@ std::vector<std::shared_ptr<Repository>> parse_config(const std::string& yaml_fi
 }
 
 void process( const std::shared_ptr<Repository>& repo
-            , const std::shared_ptr<GlobalOptions>& opts) {
+            , const std::shared_ptr<GlobalOptions>& opts ) {
   if (repo->navigate()) {
     repo->process(opts);
   }
@@ -68,7 +72,7 @@ int main() {
   }
   if (std::filesystem::exists(CONFIG_FILE)) {
     const auto repositories = parse_config(CONFIG_FILE);
-    for(const auto &repo : repositories) {
+    for (const auto &repo : repositories) {
       std::cout << "processing: " << repo << std::endl;
       process(repo, otpions);
     }

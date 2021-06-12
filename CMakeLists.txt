@@ -17,27 +17,21 @@ ExternalProject_Add(yaml_cpp
   GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git"
   SOURCE_DIR yaml-cpp
   BINARY_DIR yaml-cpp-build
-  INSTALL_DIR "${CMAKE_BINARY_DIR}/prefix"
+  INSTALL_DIR "${CMAKE_BINARY_DIR}"
   CMAKE_ARGS
     -DYAML_CPP_BUILD_TESTS=OFF
     -DYAML_BUILD_SHARED_LIBS=OFF
     -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+    -DCMAKE_INSTALL_LIBDIR:PATH=<INSTALL_DIR>/lib
     -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
 )
 
 add_library(yaml-cpp UNKNOWN IMPORTED)
 
-if(EXISTS ${PROJECT_BINARY_DIR}/prefix/lib64/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX})
-  set_target_properties(yaml-cpp PROPERTIES
-    IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/prefix/lib64/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX}
-  )
-else()
-  set_target_properties(yaml-cpp PROPERTIES
-    IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/prefix/lib/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX}
-  )
-endif()
+set_target_properties(yaml-cpp PROPERTIES
+IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-include_directories(SYSTEM "${PROJECT_BINARY_DIR}/prefix/include")
+include_directories(SYSTEM "${PROJECT_BINARY_DIR}/include")
 
 add_executable(shelter main.cxx)
 

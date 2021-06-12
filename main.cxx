@@ -10,8 +10,8 @@
 #include <filesystem>
 #include <fstream>
 
-static const char* OPTIONS_FILE = "../shelter.yaml";
-static const char* CONFIG_FILE = "../config.yaml";
+static const char* OPTIONS_FILE = ".shelter_options.yml";
+static const char* CONFIG_FILE = ".shelter.yml";
 
 std::shared_ptr<GlobalOptions> parse_options(const std::string& yaml_file) {
   const auto options = YAML::LoadFile(yaml_file);
@@ -75,17 +75,38 @@ void save_config(YAML::Node& config, const std::string& conf) {
 }
 
 int main() {
+
+  // Fucking wizardy from StackOverflow
+  #pragma GCC diagnostic push
+  #pragma GCC diagnostic ignored "-Wpedantic"
+  #pragma GCC diagnostic ignored "-Wnarrowing"
+  const static volatile char A = 'a'; // All this is to prevent reverse engineering
+  #ifdef unix
+    const char HOME[5] = {A-25, A-18, A-20, A-28, 0};
+    auto HomeDirectory = getenv(HOME);
+  #elif defined(_WIN32)
+    auto HomeDirectory = getenv((char[]){A-25, A-18, A-20, A-28, A-29, A-15, A-24, A-11, A-28, 0});
+    const char*Homepath = getenv((char[]){A-25, A-18, A-20, A-28, A-17, A-32, A-13, A-25, 0});
+    HomeDirectory = malloc(strlen(HomeDirectory)+strlen(Homepath)+1);
+    strcat(HomeDirectory, Homepath);
+  #else
+    auto HomeDirectory = ".";
+  #endif
+  #pragma GCC diagnostic pop
+
+  const std::string options_file = HomeDirectory + std::string("/") + OPTIONS_FILE;
+  const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
+
   std::shared_ptr<GlobalOptions> otpions;
-  if (std::filesystem::exists(OPTIONS_FILE)) {
-    otpions = parse_options(OPTIONS_FILE);
+  if (std::filesystem::exists(options_file)) {
+    otpions = parse_options(options_file);
   } else {
     otpions = std::make_shared<GlobalOptions>();
   }
-  if (std::filesystem::exists(CONFIG_FILE)) {
-    auto config = YAML::LoadFile(CONFIG_FILE);
+  if (std::filesystem::exists(config_file)) {
+    auto config = YAML::LoadFile(config_file);
     auto repositories = parse_config(config);
 
-    const auto cwd = std::filesystem::current_path();
     bool some_hash_was_updated = false;
 
     for (auto &repo : repositories) {
@@ -108,9 +129,11 @@ int main() {
     }
 
     if (some_hash_was_updated) {
-      std::filesystem::current_path(cwd);
-      save_config(config, CONFIG_FILE);
+      save_config(config, config_file);
     }
+  } else {
+    std::cout << "missing config: " << config_file << std::endl;    
   }
+
   return 0;
 }

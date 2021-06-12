@@ -31,3 +31,18 @@ template <> void Repo <VCS::Git> :: pull (
   set_hash( get_hash() );
 }
 ```
+
+config file example, should be stored at `${HOME}/.shelter.yml`
+
+```yaml
+- branch: master
+  target: /some/directory/path
+  vcs: git
+  upstream: origin master
+  task: pull
+- branch: master
+  target: /another/directory
+  vcs: git
+  upstream: origin master
+  task: pull
+```

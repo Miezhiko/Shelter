@@ -32,6 +32,7 @@ template <> void Repo <VCS::Git> :: pull (
   std::string local_hash = repo_hash();
   if (local_hash.empty()) {
     local_hash = get_local_hash();
+    set_hash( local_hash );
   }
 
   const auto repo_upstream = upstream();
@@ -65,6 +66,7 @@ template <> void Repo <VCS::Git> :: rebase (
   std::string local_hash = repo_hash();
   if (local_hash.empty()) {
     local_hash = get_local_hash();
+    set_hash( local_hash );
   }
 
   const auto repo_upstream = upstream();

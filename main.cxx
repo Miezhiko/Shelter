@@ -76,23 +76,33 @@ void save_config(YAML::Node& config, const std::string& conf) {
 
 int main() {
 
-  // Fucking wizardy from StackOverflow
+  #ifdef unix
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wpedantic"
   #pragma GCC diagnostic ignored "-Wnarrowing"
-  const static volatile char A = 'a'; // All this is to prevent reverse engineering
-  #ifdef unix
+    const static volatile char A = 'a';
     const char HOME[5] = {A-25, A-18, A-20, A-28, 0};
     auto HomeDirectory = getenv(HOME);
+  #pragma GCC diagnostic pop
   #elif defined(_WIN32)
-    auto HomeDirectory = getenv((char[]){A-25, A-18, A-20, A-28, A-29, A-15, A-24, A-11, A-28, 0});
-    const char*Homepath = getenv((char[]){A-25, A-18, A-20, A-28, A-17, A-32, A-13, A-25, 0});
-    HomeDirectory = malloc(strlen(HomeDirectory)+strlen(Homepath)+1);
-    strcat(HomeDirectory, Homepath);
+    char* HomeDirectory;
+    size_t required_size;
+    getenv_s( &required_size, NULL, 0, "USERPROFILE");
+    if (required_size == 0) {
+      std::cout << "USERPROFILE env doesn't exist!" << std::endl;
+      return 1;
+    }
+    HomeDirectory = (char*) malloc(required_size * sizeof(char));
+    if (!HomeDirectory) {
+      std::cout <<("Failed to allocate memory!\n");
+      return 1;
+    }
+    getenv_s( &required_size, HomeDirectory, required_size, "USERPROFILE" );
   #else
     auto HomeDirectory = ".";
   #endif
-  #pragma GCC diagnostic pop
+
+  std::cout << "home dir: " << HomeDirectory << std::endl;
 
   const std::string options_file = HomeDirectory + std::string("/") + OPTIONS_FILE;
   const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
@@ -103,6 +113,7 @@ int main() {
   } else {
     otpions = std::make_shared<GlobalOptions>();
   }
+
   if (std::filesystem::exists(config_file)) {
     auto config = YAML::LoadFile(config_file);
     auto repositories = parse_config(config);
@@ -132,7 +143,7 @@ int main() {
       save_config(config, config_file);
     }
   } else {
-    std::cout << "missing config: " << config_file << std::endl;    
+    std::cout << "missing config: " << config_file << std::endl;
   }
 
   return 0;

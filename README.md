@@ -6,6 +6,28 @@
 
 Simple stupid script to update code in number of directories
 
+Config file example, should be stored at `${HOME}/.shelter.yml`
+
+```yaml
+- branch: master
+  target: /some/directory/path
+  vcs: git
+  upstream: origin master
+  task: pull
+- branch: master
+  target: /another/directory
+  vcs: git
+  upstream: origin master
+  task: pull
+```
+
+If repository contains migma files (`.migma.py` or `.migma.sh`) in root directory they will be executed if repository was updated.
+
+Work in progress
+================
+
+currently only git version control system is supported for good
+
 ```cpp
 template <> void Repo <VCS::Git> :: pull (
   const std::shared_ptr<GlobalOptions>& opts
@@ -19,6 +41,7 @@ template <> void Repo <VCS::Git> :: pull (
   std::string local_hash = repo_hash();
   if (local_hash.empty()) {
     local_hash = get_local_hash();
+    set_hash( local_hash );
   }
 
   const auto repo_upstream = upstream();
@@ -39,19 +62,4 @@ template <> void Repo <VCS::Git> :: pull (
 
   set_hash( remote_hash );
 }
-```
-
-config file example, should be stored at `${HOME}/.shelter.yml`
-
-```yaml
-- branch: master
-  target: /some/directory/path
-  vcs: git
-  upstream: origin master
-  task: pull
-- branch: master
-  target: /another/directory
-  vcs: git
-  upstream: origin master
-  task: pull
 ```

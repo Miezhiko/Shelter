@@ -9,9 +9,15 @@
 
 enum class VCS { Git, Pijul };
 enum class Action { Pull, Rebase, Unkown };
+
 static std::unordered_map<std::string, Action> const STRACTION =
   { { "pull",    Action::Pull   }
   , { "rebase",  Action::Rebase }
+  };
+
+static std::unordered_map<std::string, std::string> const MIGMA =
+  { { ".migma.py", "python" }
+  , { ".migma.sh", "bash" }
   };
 
 class RepoArgs {
@@ -73,6 +79,18 @@ class Repository {
       case Action::Unkown: {
         std::cout << "unknown task for " << this << std::endl;
         break;
+      }
+    }
+  }
+  void migma() const {
+    if (std::filesystem::exists(args.target)) {
+      for ( const auto &m : MIGMA ) {
+        const std::string migma_file = args.target + std::string("/") + m.first;
+        if (std::filesystem::exists(migma_file)) {
+          const std::string migma_cmd = m.second + std::string(" ") + m.first;
+          exec(migma_cmd.c_str());
+          break;
+        }
       }
     }
   }

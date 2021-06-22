@@ -64,6 +64,9 @@ void process( std::shared_ptr<Repository>& repo
             , const std::shared_ptr<GlobalOptions>& opts ) {
   if (repo->navigate()) {
     repo->process(opts);
+    if (repo->is_hash_updated()) {
+      repo->migma();
+    }
   }
 }
 

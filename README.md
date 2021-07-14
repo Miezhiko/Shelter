@@ -1,8 +1,8 @@
 # Shelter
 
-[![Build Status](https://github.com/Qeenon/Shelter/actions/workflows/cmake.yml/badge.svg)](https://github.com/Qeenon/Shelter/actions/workflows/cmake.yml)
+[![Build Status](https://github.com/Miezhiko/Shelter/actions/workflows/cmake.yml/badge.svg)](https://github.com/Miezhiko/Shelter/actions/workflows/cmake.yml)
 [![Discord](https://img.shields.io/discord/611822838831251466?label=Discord&color=pink)](https://discord.gg/GdzjVvD)
-[![Twitter Follow](https://img.shields.io/twitter/follow/Qeenon.svg?style=social)](https://twitter.com/Qeenon)
+[![Twitter Follow](https://img.shields.io/twitter/follow/Miezhiko.svg?style=social)](https://twitter.com/Miezhiko)
 
 Simple stupid script to update code in number of directories
 

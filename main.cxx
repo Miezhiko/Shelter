@@ -7,21 +7,24 @@
 #include "yaml-cpp/yaml.h"
 #include "yaml-cpp/node/node.h"
 
+#pragma warning( push )
+#pragma warning ( disable : 4100 )
+#pragma warning ( disable : 4458 )
+#include "lyra/lyra.hpp"
+#pragma warning( pop )
+
 #include <iostream>
 #include <filesystem>
 #include <fstream>
 
+// You can't cout just dfine variable, you need to do #x thing
+#define STRINGIFY(x) #x
+// You can't just use #x thing you need to convert it into macro
+// The extra level of indirection causes the value of the macro to be stringified instead of the name of the macro.
+#define STRINGIFY_M(x) STRINGIFY(x)
+
 static const char* OPTIONS_FILE = ".shelter_options.yml";
 static const char* CONFIG_FILE = ".shelter.yml";
-
-std::shared_ptr<GlobalOptions> parse_options(const std::string& yaml_file) {
-  const auto options = YAML::LoadFile(yaml_file);
-  if (options["clean"]) {
-    const auto clean_bool = options["clean"].as<bool>();
-    return std::make_shared<GlobalOptions>(clean_bool);
-  }
-  return std::make_shared<GlobalOptions>();
-}
 
 std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {
   std::vector<std::shared_ptr<Repository>> result;
@@ -65,7 +68,7 @@ void process( std::shared_ptr<Repository>& repo
   if (repo->navigate()) {
     repo->process(opts);
     if (repo->is_hash_updated()) {
-      repo->migma();
+      repo->migma(opts);
     }
   }
 }
@@ -78,18 +81,67 @@ void save_config(YAML::Node& config, const std::string& conf) {
   fout.close();
 }
 
-int main() {
+void show_version(bool display_git_stats = false) {
+  #ifdef VERSION_CMAKE
+  std::cout << "Shelter v" << STRINGIFY_M(VERSION_CMAKE) << std::endl;
+  #endif
+  if (display_git_stats) {
+    #if defined(BRANCH_CMAKE) && defined(HASH_CMAKE)
+      std::cout << "Git branch: " << STRINGIFY_M(BRANCH_CMAKE)
+            << ", Commit: " << STRINGIFY_M(HASH_CMAKE) <<  std::endl;
+    #endif
+  }
+}
+
+int main(int argc, char *argv[]) {
+  auto verbose = false;
+  auto help = false;
+  auto do_exit = false;
+  auto cli
+    = lyra::cli()
+    | lyra::help(help)
+    | lyra::opt(
+      [&](bool){ verbose = true; })
+      ["-v"]["--verbose"]
+      ("Display verbose output")
+    | lyra::opt(
+      [&](bool){ 
+        show_version(true);
+        do_exit = true;
+      })
+      ["--version"]
+      ("Display version")
+    ;
+
+  const auto result = cli.parse( { argc, argv } );
+  if ( !result ) {
+    std::cerr << "Error in command line: " << result.errorMessage() << std::endl;
+    exit(1);
+  }
+
+  if (help) {
+    show_version();
+    std::cout << "\n" << cli << std::endl;
+    exit(0);
+  }
+
+  if (do_exit) {
+    exit(0);
+  }
 
   const auto HomeDirectory = utils::get_home_dir();
 
   const std::string options_file = HomeDirectory + std::string("/") + OPTIONS_FILE;
   const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
 
-  std::shared_ptr<GlobalOptions> otpions;
+  std::shared_ptr<GlobalOptions> otpions = std::make_shared<GlobalOptions>();
+  
   if (std::filesystem::exists(options_file)) {
-    otpions = parse_options(options_file);
-  } else {
-    otpions = std::make_shared<GlobalOptions>();
+    otpions->parse_options(options_file);
+  }
+
+  if (verbose) {
+    otpions->set_verbose(true);
   }
 
   if (std::filesystem::exists(config_file)) {

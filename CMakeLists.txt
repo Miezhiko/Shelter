@@ -5,6 +5,8 @@ include(ExternalProject)
 
 project (shelter)
 
+set(VERSION 1.0)
+
 if (MSVC)
   # warning level 4 and all warnings as errors
   add_compile_options(/W4 /WX)
@@ -13,10 +15,18 @@ else()
   add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
 
+ExternalProject_Add(lyra
+  GIT_REPOSITORY "https://github.com/bfgroup/Lyra.git"
+  SOURCE_DIR lyra
+  INSTALL_DIR "${CMAKE_BINARY_DIR}"
+  CMAKE_ARGS
+    -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+)
+
 ExternalProject_Add(yaml_cpp
   GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git"
   SOURCE_DIR yaml-cpp
-  BINARY_DIR yaml-cpp-build
+  BINARY_DIR yaml-cpp-build 
   INSTALL_DIR "${CMAKE_BINARY_DIR}"
   CMAKE_ARGS
     -DYAML_CPP_BUILD_TESTS=OFF
@@ -33,9 +43,27 @@ IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-c
 
 include_directories(SYSTEM "${PROJECT_BINARY_DIR}/include")
 
+# Get the current working branch
+execute_process(
+    COMMAND git rev-parse --abbrev-ref HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+# Get the latest commit hash
+execute_process(
+    COMMAND git rev-parse HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+add_definitions( -DVERSION_CMAKE=${VERSION} )
+add_definitions( -DBRANCH_CMAKE=${GIT_BRANCH} )
+add_definitions( -DHASH_CMAKE=${GIT_COMMIT_HASH} )
+
 add_executable(shelter main.cxx)
 
-add_dependencies(shelter yaml_cpp)
+add_dependencies(shelter yaml_cpp lyra)
 target_link_libraries(shelter
   yaml-cpp
 )

@@ -82,13 +82,16 @@ class Repository {
       }
     }
   }
-  void migma() const {
+  void migma(const std::shared_ptr<GlobalOptions>& opts) const {
     if (std::filesystem::exists(args.target)) {
       for ( const auto &m : MIGMA ) {
         const std::string migma_file = args.target + std::string("/") + m.first;
         if (std::filesystem::exists(migma_file)) {
           const std::string migma_cmd = m.second + std::string(" ") + m.first;
-          exec(migma_cmd.c_str());
+          const auto output = exec(migma_cmd.c_str());
+          if (opts->is_verbose()) {
+            std::cout << output << std::endl;
+          }
           break;
         }
       }

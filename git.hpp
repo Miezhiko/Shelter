@@ -18,6 +18,14 @@ namespace {
     }
     return ls_remote;
   }
+  void clean(bool verbose = false) {
+    const auto output1 = exec("git reset --hard");
+    const auto output2 = exec("git clean -fxd");
+    if (verbose) {
+      std::cout << output1 << "\n"
+                << output2 << std::endl;
+    }
+  }
 }
 
 template <> void Repo <VCS::Git> :: pull (
@@ -25,11 +33,14 @@ template <> void Repo <VCS::Git> :: pull (
 ) {
   const auto repo_branch = branch();
   if (get_branch() != repo_branch) {
-    std::string checkout_cmd = "git checkout " + repo_branch;
-    exec(checkout_cmd.c_str());
+    const auto checkout_cmd = "git checkout " + repo_branch;
+    const auto output = exec(checkout_cmd.c_str());
+    if (opts->is_verbose()) {
+      std::cout << output << std::endl;
+    }
   }
 
-  std::string local_hash = repo_hash();
+  auto local_hash = repo_hash();
   if (local_hash.empty()) {
     local_hash = get_local_hash();
     set_hash( local_hash );
@@ -44,12 +55,14 @@ template <> void Repo <VCS::Git> :: pull (
   }
 
   if (opts->do_clean()) {
-    exec("git reset --hard");
-    exec("git clean -fxd");
+    clean(opts->is_verbose());
   }
 
-  std::string pull_cmd = "git pull " + repo_upstream;
-  exec(pull_cmd.c_str());
+  const auto pull_cmd = "git pull " + repo_upstream;
+  const auto output = exec(pull_cmd.c_str());
+  if (opts->is_verbose()) {
+    std::cout << output << std::endl;
+  }
 
   set_hash( remote_hash );
 }
@@ -59,11 +72,14 @@ template <> void Repo <VCS::Git> :: rebase (
 ) {
   const auto repo_branch = branch();
   if (get_branch() != repo_branch) {
-    std::string checkout_cmd = "git checkout " + repo_branch;
-    exec(checkout_cmd.c_str());
+    const auto checkout_cmd = "git checkout " + repo_branch;
+    const auto output = exec(checkout_cmd.c_str());
+    if (opts->is_verbose()) {
+      std::cout << output << std::endl;
+    }
   }
 
-  std::string local_hash = repo_hash();
+  auto local_hash = repo_hash();
   if (local_hash.empty()) {
     local_hash = get_local_hash();
     set_hash( local_hash );
@@ -78,15 +94,20 @@ template <> void Repo <VCS::Git> :: rebase (
   }
 
   if (opts->do_clean()) {
-    exec("git reset --hard");
-    exec("git clean -fxd");
+    clean(opts->is_verbose());
   }
 
   std::string pull_cmd = "git pull --rebase " + repo_upstream;
-  exec(pull_cmd.c_str());
+  const auto pull_output = exec(pull_cmd.c_str());
+  if (opts->is_verbose()) {
+    std::cout << pull_output << std::endl;
+  }
 
   std::string push_cmd = "git push --force origin " + repo_branch;
-  exec(push_cmd.c_str());
+  const auto push_output = exec(push_cmd.c_str());
+  if (opts->is_verbose()) {
+    std::cout << push_output << std::endl;
+  }
 
   set_hash( remote_hash );
 }

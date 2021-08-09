@@ -7,11 +7,17 @@
 #include "yaml-cpp/yaml.h"
 #include "yaml-cpp/node/node.h"
 
+#ifdef _WIN32
 #pragma warning( push )
 #pragma warning ( disable : 4100 )
 #pragma warning ( disable : 4458 )
+#endif
+
 #include "lyra/lyra.hpp"
+
+#ifdef _WIN32
 #pragma warning( pop )
+#endif
 
 #include <iostream>
 #include <filesystem>

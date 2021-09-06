@@ -5,7 +5,7 @@ include(ExternalProject)
 
 project (shelter)
 
-set(VERSION 1.0)
+set(VERSION 1.0.1)
 
 if (MSVC)
   # warning level 4 and all warnings as errors

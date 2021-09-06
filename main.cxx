@@ -125,13 +125,14 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  if (help) {
-    show_version();
-    std::cout << "\n" << cli << std::endl;
+  if (do_exit) {
     exit(0);
   }
 
-  if (do_exit) {
+  show_version();
+
+  if (help) {
+    std::cout << "\n" << cli << std::endl;
     exit(0);
   }
 

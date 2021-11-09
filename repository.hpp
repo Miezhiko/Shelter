@@ -20,6 +20,22 @@ static std::unordered_map<std::string, std::string> const MIGMA =
   , { ".migma.sh", "bash" }
   };
 
+std::ostream& operator << (std::ostream& os, const Action& a)
+{
+  auto it = std::find_if(std::begin(STRACTION), std::end(STRACTION),
+                         [&a](auto&& p) { return p.second == a; });
+
+  if (it == std::end(STRACTION)) {
+    os << "Unknown ("
+       << static_cast<std::underlying_type<Action>::type>(a)
+       << ")";
+  } else {
+    os << it->first;
+  }
+
+  return os;
+}
+
 class RepoArgs {
   std::string target;
   std::string upstream;
@@ -96,6 +112,13 @@ class Repository {
         }
       }
     }
+  }
+  std::string details() {
+    std::stringstream details;
+    details << args.target
+            << " (" << args.branch
+            << ") [" << args.action << "]";
+    return details.str();
   }
   friend std::ostream& operator<< (std::ostream& os, const Repository& r) {
     os << r.target();

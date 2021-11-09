@@ -99,10 +99,17 @@ void show_version(bool display_git_stats = false) {
   }
 }
 
+void list_repositories(std::vector<std::shared_ptr<Repository>>& repositories) {
+  for (auto &repo : repositories) {
+    std::cout << repo->details() << std::endl;
+  }
+}
+
 int main(int argc, char *argv[]) {
-  auto verbose = false;
-  auto help = false;
-  auto do_exit = false;
+  auto verbose  = false;
+  auto help     = false;
+  auto do_exit  = false;
+  auto list     = false;
   auto cli
     = lyra::cli()
     | lyra::help(help)
@@ -110,6 +117,10 @@ int main(int argc, char *argv[]) {
       [&](bool){ verbose = true; })
       ["-v"]["--verbose"]
       ("Display verbose output")
+    | lyra::opt(
+      [&](bool){ list = true; })
+      ["-l"]["--list"]
+      ("Show tracking repositories")
     | lyra::opt(
       [&](bool){ 
         show_version(true);
@@ -154,6 +165,11 @@ int main(int argc, char *argv[]) {
   if (std::filesystem::exists(config_file)) {
     auto config = YAML::LoadFile(config_file);
     auto repositories = parse_config(config);
+
+    if (list) {
+      list_repositories(repositories);
+      return 0;
+    }
 
     bool some_hash_was_updated = false;
 

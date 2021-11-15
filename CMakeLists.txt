@@ -7,6 +7,9 @@ project (shelter)
 
 set(VERSION 1.0.2)
 
+option(USE_LTO "Use link time optimization" TRUE)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION USE_LTO)
+
 if (MSVC)
   # warning level 4 and all warnings as errors
   add_compile_options(/W4 /WX)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "stdafx.hpp"
+
 /*
  * This creepy C++ code was taken from google / stackoverflow
  * I don't want to read it even
@@ -8,7 +10,6 @@
  */
 
 #include <cstdio>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>

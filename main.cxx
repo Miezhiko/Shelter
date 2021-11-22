@@ -1,5 +1,4 @@
 #include "utils.hpp"
-#include "repository.hpp"
 
 #include "git.hpp"
 #include "pijul.hpp"

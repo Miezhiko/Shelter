@@ -1,3 +1,7 @@
+#pragma once
+
+#include "repository.hpp"
+
 namespace {
   std::string get_branch() {
     std::string rev_parse = exec("git rev-parse --abbrev-ref HEAD");

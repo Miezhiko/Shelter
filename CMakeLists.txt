@@ -5,7 +5,7 @@ include(ExternalProject)
 
 project (shelter)
 
-set(VERSION 1.0.2)
+set(VERSION 1.0.3)
 
 option(USE_LTO "Use link time optimization" TRUE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION USE_LTO)
@@ -17,6 +17,9 @@ else()
   # lots of warnings and all warnings as errors
   add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
+
+# this needs for clang-tidy to get include paths etc
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 ExternalProject_Add(lyra
   GIT_REPOSITORY "https://github.com/bfgroup/Lyra.git"
@@ -67,6 +70,10 @@ add_definitions( -DHASH_CMAKE=${GIT_COMMIT_HASH} )
 add_executable(shelter main.cxx)
 
 add_dependencies(shelter yaml_cpp lyra)
+target_precompile_headers(shelter
+  PRIVATE
+    stdafx.hpp
+)
 target_link_libraries(shelter
   yaml-cpp
 )

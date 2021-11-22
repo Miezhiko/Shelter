@@ -4,7 +4,7 @@
 
 namespace utils {
 
-char* get_home_dir() {
+const char* get_home_dir() {
   #ifdef unix
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wpedantic"

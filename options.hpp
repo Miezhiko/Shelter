@@ -3,7 +3,7 @@
 #include "yaml-cpp/yaml.h"
 #include "yaml-cpp/node/node.h"
 
-class GlobalOptions {
+class GlobalOptions final {
   bool clean;
   bool verbose;
   public:

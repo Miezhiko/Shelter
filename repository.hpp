@@ -21,8 +21,7 @@ static std::unordered_map<std::string, std::string> const MIGMA =
   , { ".migma.pl",    "perl" }
   };
 
-std::ostream& operator << (std::ostream& os, const Action& a)
-{
+std::ostream& operator << (std::ostream& os, const Action& a) {
   auto it = std::find_if(std::begin(STRACTION), std::end(STRACTION),
                          [&a](auto&& p) { return p.second == a; });
 
@@ -69,11 +68,11 @@ class Repository {
     }
     return false;
   }
-  std::string target() const    { return args.target;   }
-  std::string upstream() const  { return args.upstream; }
-  std::string branch() const    { return args.branch;   }
-  std::string repo_hash() const { return hash;          }
-  bool is_hash_updated() const  { return hash_updated;  }
+  const std::string_view target() const { return args.target;   }
+  const std::string upstream() const    { return args.upstream; }
+  const std::string branch() const      { return args.branch;   }
+  const std::string repo_hash() const   { return hash;          }
+  bool is_hash_updated() const          { return hash_updated;  }
   void set_hash(std::string h) {
     if (hash != h) {
       std::cout << "new hash: " << h << std::endl;
@@ -114,7 +113,7 @@ class Repository {
       }
     }
   }
-  std::string details() {
+  const std::string details() {
     std::stringstream details;
     details << args.target
             << " (" << args.branch
@@ -133,7 +132,7 @@ class Repository {
 };
 
 template <VCS G>
-class Repo : public Repository {
+class Repo final : public Repository {
   public:
   Repo(const RepoArgs& a, std::string h)
     : Repository(a, h) {};

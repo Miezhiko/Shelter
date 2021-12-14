@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
 
   const auto result = cli.parse( { argc, argv } );
   if ( !result ) {
-    std::cerr << "Error in command line: " << result.errorMessage() << std::endl;
+    std::cerr << "Error in command line: " << result.message() << std::endl;
     exit(1);
   }
 

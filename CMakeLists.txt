@@ -5,7 +5,7 @@ include(ExternalProject)
 
 project (shelter)
 
-set(VERSION 1.0.5)
+set(VERSION 1.0.6)
 
 option(USE_LTO "Use link time optimization" TRUE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION USE_LTO)
@@ -47,7 +47,8 @@ add_library(yaml-cpp UNKNOWN IMPORTED)
 set_target_properties(yaml-cpp PROPERTIES
 IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX})
 
-include_directories(SYSTEM "${PROJECT_BINARY_DIR}/include")
+include_directories(SYSTEM "${CMAKE_SOURCE_DIR}/src"
+                           "${PROJECT_BINARY_DIR}/include")
 
 # Get the current working branch
 execute_process(
@@ -67,12 +68,12 @@ add_definitions( -DVERSION_CMAKE=${VERSION} )
 add_definitions( -DBRANCH_CMAKE=${GIT_BRANCH} )
 add_definitions( -DHASH_CMAKE=${GIT_COMMIT_HASH} )
 
-add_executable(shelter main.cxx)
+add_executable(shelter src/main.cxx)
 
 add_dependencies(shelter yaml_cpp lyra)
 target_precompile_headers(shelter
   PRIVATE
-    stdafx.hpp
+    src/stdafx.hpp
 )
 target_link_libraries(shelter
   yaml-cpp

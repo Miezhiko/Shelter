@@ -3,9 +3,11 @@
 struct add_command
 {
   bool show_help = false;
-  std::string directory;
-  std::string action = "pull";
-  std::string branch = "master";
+  std::string directory; // current directory?
+  std::string action    = "pull";
+  std::string branch    = "master";
+  std::string upstream  = "origin master";
+  std::string vcs       = "git";
 
   add_command(lyra::cli & cli)
   {
@@ -28,6 +30,16 @@ struct add_command
             .name("-b").name("--branch")
             .optional()
             .help("Target branch"))
+        .add_argument(
+          lyra::opt(upstream, "upstream")
+            .name("-u").name("--upstream")
+            .optional()
+            .help("Target upstream"))
+        .add_argument(
+          lyra::opt(vcs, "vcs")
+            .name("--vcs")
+            .optional()
+            .help("Target version control system (git)"))
     );
   }
 
@@ -41,12 +53,12 @@ struct add_command
       if (std::filesystem::exists(config_file)) {
         auto config = YAML::LoadFile(config_file);
         YAML::Node new_node;
-        new_node["target"] = directory;
-        new_node["task"] = action;
-        new_node["upstream"] = "upstream";
-        new_node["branch"] = branch;
-        new_node["vcs"] = "git";
-        new_node["hash"] = "";
+        new_node["target"]    = directory;
+        new_node["task"]      = action;
+        new_node["upstream"]  = upstream;
+        new_node["branch"]    = branch;
+        new_node["vcs"]       = vcs;
+        new_node["hash"]      = "";
         config.push_back(new_node);
         save_config(config, config_file);
       }

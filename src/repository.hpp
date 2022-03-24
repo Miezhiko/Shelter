@@ -22,8 +22,8 @@ static std::unordered_map<std::string, std::string> const MIGMA =
   };
 
 std::ostream& operator << (std::ostream& os, const Action& a) {
-  auto it = std::find_if(std::begin(STRACTION), std::end(STRACTION),
-                         [&a](auto&& p) { return p.second == a; });
+  auto it = std::find_if( std::begin(STRACTION), std::end(STRACTION)
+                        , [&a](auto&& p) { return p.second == a; } );
 
   if (it == std::end(STRACTION)) {
     os << "Unknown ("

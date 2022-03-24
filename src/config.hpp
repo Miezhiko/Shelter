@@ -26,10 +26,10 @@ const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& co
   std::vector<std::shared_ptr<Repository>> result;
   for (const auto node : config) {
     if (node["target"] && node["task"] && node["upstream"] && node["branch"]) {
-      const auto target_str   = node["target"].as<std::string>();
-      const auto action_str   = node["task"].as<std::string>();
-      const auto upstream_str = node["upstream"].as<std::string>();
-      const auto branch_str   = node["branch"].as<std::string>();
+      const auto target_str   = node["target"]    .as<std::string>();
+      const auto action_str   = node["task"]      .as<std::string>();
+      const auto upstream_str = node["upstream"]  .as<std::string>();
+      const auto branch_str   = node["branch"]    .as<std::string>();
       const RepoArgs args( target_str, action_str, upstream_str, branch_str );
 
       std::string hash_str;

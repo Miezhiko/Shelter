@@ -6,6 +6,7 @@
 
 #include "lyra/lyra.hpp"
 
+#include "commands/show.hpp"
 #include "commands/add.hpp"
 #include "commands/rm.hpp"
 
@@ -32,7 +33,8 @@ void show_version(bool display_git_stats = false) {
   if (display_git_stats) {
     #if defined(BRANCH_CMAKE) && defined(HASH_CMAKE)
       std::cout << "Git branch: " << STRINGIFY_M(BRANCH_CMAKE)
-            << ", Commit: " << STRINGIFY_M(HASH_CMAKE) <<  std::endl;
+                << ", Commit: "   << STRINGIFY_M(HASH_CMAKE)
+                <<  std::endl;
     #endif
   }
 }
@@ -66,8 +68,9 @@ int main(int argc, char *argv[]) {
       ("Display version")
     ;
 
-  add_command add { cli };
-  rm_command rm { cli };
+  show_command _show { cli };
+  add_command _add { cli };
+  rm_command _rm { cli };
 
   const auto result = cli.parse( { argc, argv } );
   if ( !result ) {

@@ -23,8 +23,8 @@ std::string exec(const char* cmd) {
   if (!pipe) {
     throw std::runtime_error("popen() failed!");
   }
-  while (fgets(buffer.data()
-        , static_cast<int>(buffer.size()), pipe.get()) != nullptr) {
+  while ( fgets(buffer.data()
+        , static_cast<int>(buffer.size()), pipe.get()) != nullptr ) {
     result += buffer.data();
   }
   return result;

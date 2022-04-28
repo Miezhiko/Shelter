@@ -14,13 +14,16 @@ struct rm_command
         .add_argument(lyra::help(show_help))
         .add_argument(
           lyra::arg(directory, "directory")
-            .required()
+            .optional()
             .help("Target directory"))
     );
   }
 
   void do_command(const lyra::group & g)
   {
+    if (directory.empty() || directory == ".") {
+      directory = std::filesystem::current_path();
+    }
     if (show_help) {
       std::cout << g;
     } else {

@@ -31,12 +31,19 @@ struct rm_command
       const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
       if (std::filesystem::exists(config_file)) {
         auto config = YAML::LoadFile(config_file);
+        unsigned int node_index = 0;
         for(YAML::Node node : config) {
           const auto target_str = node["target"].as<std::string>();
           if (target_str == directory) {
-            config.remove(node);
-            save_config(config, config_file);
+            if (config.remove(node_index)) {
+              save_config(config, config_file);
+              exit(0);
+            } else {
+              std::cout << "failed to remove repository " << directory << std::endl;
+              exit(1);
+            }
           }
+          node_index++;
         }
         std::cout << "repository " << directory << " not found" << std::endl;
       }

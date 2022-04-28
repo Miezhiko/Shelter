@@ -75,18 +75,18 @@ int main(int argc, char *argv[]) {
   const auto result = cli.parse( { argc, argv } );
   if ( !result ) {
     std::cerr << "Error in command line: " << result.message() << std::endl;
-    exit(1);
+    return 1;
   }
 
   if (do_exit) {
-    exit(0);
+    return 0;
   }
 
   show_version();
 
   if (help) {
     std::cout << "\n" << cli << std::endl;
-    exit(0);
+    return 0;
   }
 
   const auto HomeDirectory = utils::get_home_dir();

@@ -16,16 +16,6 @@
 // The extra level of indirection causes the value of the macro to be stringified instead of the name of the macro.
 #define STRINGIFY_M(x) STRINGIFY(x)
 
-void process( std::shared_ptr<Repository>& repo
-            , const std::shared_ptr<GlobalOptions>& opts ) {
-  if (repo->navigate()) {
-    repo->process(opts);
-    if (repo->is_hash_updated()) {
-      repo->migma(opts);
-    }
-  }
-}
-
 void show_version(bool display_git_stats = false) {
   #ifdef VERSION_CMAKE
   std::cout << "Shelter v" << STRINGIFY_M(VERSION_CMAKE) << std::endl;
@@ -117,7 +107,7 @@ int main(int argc, char *argv[]) {
 
     for (auto &repo : repositories) {
       std::cout << "processing: " << repo << std::endl;
-      process(repo, otpions);
+      repo->process(otpions);
       if (repo->is_hash_updated()) {
         for (YAML::iterator it = config.begin(); it != config.end(); ++it) {
           const YAML::Node& node = *it;

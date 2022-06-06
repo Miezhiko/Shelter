@@ -58,45 +58,12 @@ class Repository {
   RepoArgs args;
   std::string hash;
   bool hash_updated;
-  public:
-  Repository(const RepoArgs& a, std::string h)
-    : args(a), hash(h), hash_updated(false) {};
   bool navigate() const {
     if (std::filesystem::exists(args.target)) {
       std::filesystem::current_path(args.target);
       return true;
     }
     return false;
-  }
-  const std::string_view target() const { return args.target;   }
-  const std::string upstream() const    { return args.upstream; }
-  const std::string branch() const      { return args.branch;   }
-  const std::string repo_hash() const   { return hash;          }
-  bool is_hash_updated() const          { return hash_updated;  }
-  void set_hash(std::string h) {
-    if (hash != h) {
-      std::cout << "new hash: " << h << std::endl;
-      hash = h;
-      hash_updated = true;
-    }
-  }
-  virtual void pull   (const std::shared_ptr<GlobalOptions>&) {};
-  virtual void rebase (const std::shared_ptr<GlobalOptions>&) {};
-  void process(const std::shared_ptr<GlobalOptions>& opts) {
-    switch (args.action) {
-      case Action::Pull: {
-        pull(opts);
-        break;
-      }
-      case Action::Rebase: {
-        rebase(opts);
-        break;
-      }
-      case Action::Unkown: {
-        std::cout << "unknown task for " << this << std::endl;
-        break;
-      }
-    }
   }
   void migma(const std::shared_ptr<GlobalOptions>& opts) const {
     if (std::filesystem::exists(args.target)) {
@@ -110,6 +77,44 @@ class Repository {
           }
           break;
         }
+      }
+    }
+  }
+  virtual void pull   (const std::shared_ptr<GlobalOptions>&) {};
+  virtual void rebase (const std::shared_ptr<GlobalOptions>&) {};
+  public:
+  Repository(const RepoArgs& a, std::string h)
+    : args(a), hash(h), hash_updated(false) {};
+  const std::string_view target() const { return args.target;   }
+  const std::string upstream() const    { return args.upstream; }
+  const std::string branch() const      { return args.branch;   }
+  const std::string repo_hash() const   { return hash;          }
+  bool is_hash_updated() const          { return hash_updated;  }
+  void set_hash(std::string h) {
+    if (hash != h) {
+      std::cout << "new hash: " << h << std::endl;
+      hash = h;
+      hash_updated = true;
+    }
+  }
+  void process(const std::shared_ptr<GlobalOptions>& opts) {
+    if (navigate()) {
+      switch (args.action) {
+        case Action::Pull: {
+          pull(opts);
+          break;
+        }
+        case Action::Rebase: {
+          rebase(opts);
+          break;
+        }
+        case Action::Unkown: {
+          std::cout << "unknown task for " << this << std::endl;
+          return;
+        }
+      }
+      if (is_hash_updated()) {
+        migma(opts);
       }
     }
   }
@@ -133,9 +138,9 @@ class Repository {
 
 template <VCS G>
 class Repo final : public Repository {
+  virtual void pull   (const std::shared_ptr<GlobalOptions>&);
+  virtual void rebase (const std::shared_ptr<GlobalOptions>&);
   public:
   Repo(const RepoArgs& a, std::string h)
     : Repository(a, h) {};
-  virtual void pull   (const std::shared_ptr<GlobalOptions>&);
-  virtual void rebase (const std::shared_ptr<GlobalOptions>&);
 };

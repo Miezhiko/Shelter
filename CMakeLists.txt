@@ -23,6 +23,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 ExternalProject_Add(lyra
   GIT_REPOSITORY "https://github.com/bfgroup/Lyra.git"
+  GIT_TAG "develop"
   SOURCE_DIR lyra
   INSTALL_DIR "${CMAKE_BINARY_DIR}"
   CMAKE_ARGS
@@ -31,6 +32,7 @@ ExternalProject_Add(lyra
 
 ExternalProject_Add(yaml_cpp
   GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git"
+  GIT_TAG "master"
   SOURCE_DIR yaml-cpp
   BINARY_DIR yaml-cpp-build 
   INSTALL_DIR "${CMAKE_BINARY_DIR}"

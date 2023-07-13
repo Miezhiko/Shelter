@@ -24,6 +24,7 @@ static const char* CONFIG_FILE = ".shelter.yml";
 
 const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {
   std::vector<std::shared_ptr<Repository>> result;
+  result.reserve(config.size());
   for (const auto& node : config) {
     if (node["target"] && node["task"] && node["upstream"] && node["branch"]) {
       const auto target_str   = node["target"]    .as<std::string>();

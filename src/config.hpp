@@ -24,7 +24,7 @@ static const char* CONFIG_FILE = ".shelter.yml";
 
 const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {
   std::vector<std::shared_ptr<Repository>> result;
-  for (const auto node : config) {
+  for (const auto& node : config) {
     if (node["target"] && node["task"] && node["upstream"] && node["branch"]) {
       const auto target_str   = node["target"]    .as<std::string>();
       const auto action_str   = node["task"]      .as<std::string>();
@@ -43,8 +43,7 @@ const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& co
           result.push_back(
             std::make_shared<Repo<VCS::Git>>(args, hash_str)
           );
-        }
-        else if (vcs == "pijul") {
+        } else if (vcs == "pijul") {
           result.push_back(
             std::make_shared<Repo<VCS::Pijul>>(args, hash_str)
           );

@@ -4,6 +4,8 @@
 
 #include "repository.hpp"
 
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
 namespace {
   const std::string get_remote_hash(const std::string& upstream) {
     const std::string ls_remote_cmd = "git ls-remote " + upstream;
@@ -165,12 +167,12 @@ template <> void Repo <VCS::Git> :: pull (
       return;
     }
 
-    std::string_view upstream_branch =
+    std::string upstream_branch =
       upstream_split.size() > 1 ? upstream_split[1]
                                 : branch_name;
 
     git_reference* branch_ref = nullptr;
-    error = git_branch_lookup(&branch_ref, repo, upstream_branch.data(), GIT_BRANCH_REMOTE);
+    error = git_branch_lookup(&branch_ref, repo, upstream_branch.c_str(), GIT_BRANCH_REMOTE);
     if (error != 0) {
       std::cout << "git_branch_lookup error code: " << error << std::endl;
       git_remote_free(remote);
@@ -211,7 +213,7 @@ template <> void Repo <VCS::Git> :: pull (
       return;
     }
 
-    error = git_branch_set_upstream(branch_ref, upstream_branch.data());
+    error = git_branch_set_upstream(branch_ref, upstream_branch.c_str());
     if (error != 0) {
       std::cout << "git_branch_set_upstream error code: " << error << std::endl;
       git_reference_free(branch_ref);

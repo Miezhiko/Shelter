@@ -17,15 +17,13 @@ class GlobalOptions final {
     this->verbose = v;
   }
   void parse_options(const std::string& yaml_file) {
-    const auto options = YAML::LoadFile(yaml_file);
+    const auto& options = YAML::LoadFile(yaml_file);
     auto global_options = std::make_shared<GlobalOptions>();
     if (options["clean"]) {
-      const auto clean_bool = options["clean"].as<bool>();
-      this->clean = clean_bool;
+      this->clean = options["clean"].as<bool>();
     }
     if (options["verbose"]) {
-      const auto verbose_bool = options["verbose"].as<bool>();
-      this->verbose = verbose_bool;
+      this->verbose = options["verbose"].as<bool>();
     }
   }
   GlobalOptions()

@@ -5,16 +5,15 @@ include(ExternalProject)
 
 project (shelter)
 
-set(VERSION 1.0.13)
+set(VERSION 2.0.0)
 
 option(USE_LTO "Use link time optimization" TRUE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION USE_LTO)
 
 if (MSVC)
-  # warning level 4 and all warnings as errors
   add_compile_options(/W4 /WX)
 else()
-  # lots of warnings and all warnings as errors
+  find_library(GIT2_LIBRARY NAMES git2)
   add_compile_options(-Wall -Wextra -pedantic -Werror)
 endif()
 
@@ -73,10 +72,18 @@ add_definitions( -DHASH_CMAKE=${GIT_COMMIT_HASH} )
 add_executable(shelter src/main.cxx)
 
 add_dependencies(shelter yaml_cpp lyra)
+
 target_precompile_headers(shelter
   PRIVATE
     src/stdafx.hpp
 )
+
+if (MSVC)
 target_link_libraries(shelter
   yaml-cpp
 )
+else()
+target_link_libraries(shelter
+  yaml-cpp ${GIT2_LIBRARY}
+)
+endif()

@@ -1,7 +1,12 @@
 #include "utils.hpp"
 #include "config.hpp"
 
+#ifdef _WIN32
 #include "vcs/git.hpp"
+#else
+#include "vcs/git2.hpp"
+#endif
+
 #include "vcs/pijul.hpp"
 
 #include "lyra/lyra.hpp"

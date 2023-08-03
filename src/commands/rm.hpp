@@ -22,7 +22,7 @@ struct rm_command
   void do_command(const lyra::group & g)
   {
     if (directory.empty() || directory == ".") {
-      directory = std::filesystem::current_path();
+      directory = std::filesystem::current_path().generic_string();
     }
     if (show_help) {
       std::cout << g;

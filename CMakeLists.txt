@@ -11,7 +11,7 @@ option(USE_LTO "Use link time optimization" TRUE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION USE_LTO)
 
 if (MSVC)
-  add_compile_options(/W4 /WX)
+  add_compile_options(/W4 /DNDEBUG)
 else()
   find_library(GIT2_LIBRARY NAMES git2)
   add_compile_options(-Wall -Wextra -pedantic -Werror)
@@ -29,6 +29,13 @@ ExternalProject_Add(lyra
     -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
 )
 
+
+if (MSVC)
+set(YAML_CPP_SHARED_LIBS ON)
+else()
+set(YAML_CPP_SHARED_LIBS OFF)
+endif()
+
 ExternalProject_Add(yaml_cpp
   GIT_REPOSITORY "https://github.com/jbeder/yaml-cpp.git"
   GIT_TAG "master"
@@ -37,13 +44,13 @@ ExternalProject_Add(yaml_cpp
   INSTALL_DIR "${CMAKE_BINARY_DIR}"
   CMAKE_ARGS
     -DYAML_CPP_BUILD_TESTS=OFF
-    -DYAML_BUILD_SHARED_LIBS=OFF
+    -DYAML_BUILD_SHARED_LIBS=${YAML_CPP_SHARED_LIBS}
     -DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
     -DCMAKE_INSTALL_LIBDIR:PATH=<INSTALL_DIR>/lib
     -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
 )
 
-add_library(yaml-cpp UNKNOWN IMPORTED)
+add_library(yaml-cpp STATIC  IMPORTED)
 
 set_target_properties(yaml-cpp PROPERTIES
 IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}yaml-cpp${CMAKE_STATIC_LIBRARY_SUFFIX})

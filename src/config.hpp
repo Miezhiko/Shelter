@@ -20,26 +20,32 @@
 #include <fstream>
 
 static const char* OPTIONS_FILE = ".shelter_options.yml";
-static const char* CONFIG_FILE = ".shelter.yml";
+static const char* CONFIG_FILE  = ".shelter.yml";
 
 const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {
   std::vector<std::shared_ptr<Repository>> result;
   result.reserve(config.size());
   for (const auto& node : config) {
-    if (node["target"] && node["task"] && node["upstream"] && node["branch"]) {
-      const auto target_str   = node["target"]    .as<std::string>();
-      const auto action_str   = node["task"]      .as<std::string>();
-      const auto upstream_str = node["upstream"]  .as<std::string>();
-      const auto branch_str   = node["branch"]    .as<std::string>();
-      const RepoArgs args( target_str, action_str, upstream_str, branch_str );
+    const auto& targetNode    = node["target"];
+    const auto& taskNode      = node["task"];
+    const auto& upstreamNode  = node["upstream"];
+    const auto& branchNode    = node["branch"];
+    if (targetNode && taskNode && upstreamNode && branchNode) {
+      const RepoArgs args(
+        targetNode.as<std::string>(),
+        taskNode.as<std::string>(),
+        upstreamNode.as<std::string>(),
+        branchNode.as<std::string>()
+      );
 
       std::string hash_str;
-      if (node["hash"]) {
-        hash_str = node["hash"].as<std::string>();
+      const auto& hashNode = node["hash"];
+      if (hashNode) {
+        hash_str = hashNode.as<std::string>();
       }
 
-      if(node["vcs"]) {
-        const auto vcs = node["vcs"].as<std::string>();
+      if(const auto vcsNode = node["vcs"]) {
+        const auto vcs = vcsNode.as<std::string>();
         if (vcs == "git") {
           result.push_back(
             std::make_shared<Repo<VCS::Git>>(args, hash_str)

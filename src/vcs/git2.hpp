@@ -131,14 +131,29 @@ template <> void Repo <VCS::Git> :: pull (
       goto git_pull_shutdown;
     }
     git_checkout_options gcopts = GIT_CHECKOUT_OPTIONS_INIT;
+    const git_oid* target_oid = git_reference_target(head_ref);
+
+    git_object* target_obj = nullptr;
+    git_object_lookup(&target_obj, repo, target_oid, GIT_OBJ_ANY);
+
+    if (target_obj == nullptr) {
+      std::cout << "can't checkout to "
+                << repo_branch << std::endl;
+      goto git_pull_shutdown;
+    }
+
     error = git_checkout_tree( repo
-                             , reinterpret_cast<const git_object*>(git_reference_target(head_ref))
+                             , target_obj
                              , &gcopts);
     if (error < 0) {
       std::cout << "git_checkout_tree error: "
                 << git_error_last()->message << std::endl;
+      git_object_free(target_obj);
       goto git_pull_shutdown;
     }
+
+    git_object_free(target_obj);
+
     if (opts->is_verbose()) {
       std::cout << "checkout to "
                 << repo_branch << " complete" << std::endl;

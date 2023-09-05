@@ -18,9 +18,22 @@
 #include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <unordered_map>
+#include <functional>
 
 static const char* OPTIONS_FILE = ".shelter_options.yml";
 static const char* CONFIG_FILE  = ".shelter.yml";
+
+#define MAKEREPO(T) [](RepoArgs args, std::string hash_str)\
+  { return std::make_shared<Repo<T>>(args, hash_str); }
+
+static std::unordered_map< std::string
+     , std::function<std::shared_ptr<Repository>
+            (RepoArgs args, std::string hash_str)>
+    > const VCSTYPE =
+  { { "git",    MAKEREPO(VCS::Git)   }
+  , { "pijul",  MAKEREPO(VCS::Pijul) }
+  };
 
 const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {
   std::vector<std::shared_ptr<Repository>> result;
@@ -32,10 +45,10 @@ const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& co
     const auto& branchNode    = node["branch"];
     if (targetNode && taskNode && upstreamNode && branchNode) {
       const RepoArgs args(
-        targetNode.as<std::string>(),
-        taskNode.as<std::string>(),
-        upstreamNode.as<std::string>(),
-        branchNode.as<std::string>()
+        targetNode    .as<std::string>(),
+        taskNode      .as<std::string>(),
+        upstreamNode  .as<std::string>(),
+        branchNode    .as<std::string>()
       );
 
       std::string hash_str;
@@ -46,14 +59,14 @@ const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& co
 
       if(const auto vcsNode = node["vcs"]) {
         const auto vcs = vcsNode.as<std::string>();
-        if (vcs == "git") {
-          result.push_back(
-            std::make_shared<Repo<VCS::Git>>(args, hash_str)
-          );
-        } else if (vcs == "pijul") {
-          result.push_back(
-            std::make_shared<Repo<VCS::Pijul>>(args, hash_str)
-          );
+        const auto it = VCSTYPE.find(vcs);
+        if (it != VCSTYPE.end()) {
+          result.push_back( it->second(args, hash_str) );
+        } else {
+          std::cout << "unknown vcs specified: "
+                    << vcs
+                    << ", ignoring"
+                    << std::endl;
         }
       } else {
         result.push_back(

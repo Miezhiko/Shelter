@@ -1,12 +1,10 @@
 #include "utils.hpp"
 #include "config.hpp"
 
-#ifdef _WIN32
-#include "vcs/git.hpp"
-#else
-#include "vcs/git2.hpp"
+#ifndef _WIN32
+#include "vcs/libgit.hpp"
 #endif
-
+#include "vcs/gitshell.hpp"
 #include "vcs/pijul.hpp"
 
 #include "lyra/lyra.hpp"

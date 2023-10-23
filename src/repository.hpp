@@ -6,7 +6,7 @@
 #include <filesystem>
 #include <unordered_map>
 
-enum class VCS { Git, Pijul };
+enum class VCS { Git, Pijul, GitShell };
 enum class Action { Pull, Rebase, Unkown };
 
 static std::unordered_map<std::string, Action> const STRACTION =

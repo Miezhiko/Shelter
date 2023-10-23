@@ -31,8 +31,9 @@ static std::unordered_map< std::string
      , std::function<std::shared_ptr<Repository>
             (RepoArgs args, std::string hash_str)>
     > const VCSTYPE =
-  { { "git",    MAKEREPO(VCS::Git)   }
-  , { "pijul",  MAKEREPO(VCS::Pijul) }
+  { { "git",        MAKEREPO(VCS::GitShell) }
+  , { "pijul",      MAKEREPO(VCS::Pijul)    }
+  , { "git shell",  MAKEREPO(VCS::GitShell) }
   };
 
 const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {

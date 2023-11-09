@@ -24,17 +24,21 @@
 static const char* OPTIONS_FILE = ".shelter_options.yml";
 static const char* CONFIG_FILE  = ".shelter.yml";
 
-#define MAKEREPO(T) [](RepoArgs args, std::string hash_str)\
-  { return std::make_shared<Repo<T>>(args, hash_str); }
-
-static std::unordered_map< std::string
-     , std::function<std::shared_ptr<Repository>
-            (RepoArgs args, std::string hash_str)>
-    > const VCSTYPE =
-  { { "git",        MAKEREPO(VCS::GitShell) }
-  , { "pijul",      MAKEREPO(VCS::Pijul)    }
-  , { "git shell",  MAKEREPO(VCS::GitShell) }
+namespace {
+  template <VCS T>
+  const auto makeRepo = [] (RepoArgs args, std::string hash_str) {
+    return std::make_shared<Repo<T>>(args, hash_str);
   };
+
+  static std::unordered_map< std::string
+      , std::function<std::shared_ptr<Repository>
+              (RepoArgs args, std::string hash_str)>
+      > const VCSTYPE =
+    { { "git",        makeRepo<VCS::GitShell> }
+    , { "pijul",      makeRepo<VCS::Pijul>    }
+    , { "git shell",  makeRepo<VCS::GitShell> }
+    };
+}
 
 const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {
   std::vector<std::shared_ptr<Repository>> result;

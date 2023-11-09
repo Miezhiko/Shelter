@@ -90,20 +90,16 @@ int main(int argc, char *argv[]) {
     const auto& repositories = parse_config(config);
 
     bool some_hash_was_updated = false;
-
-    for (auto &repo : repositories) {
+    for (auto& repo : repositories) {
       std::cout << "processing: " << repo << std::endl;
       repo->process(otpions);
       if (repo->is_hash_updated()) {
-        for (YAML::iterator it = config.begin(); it != config.end(); ++it) {
-          const YAML::Node& node = *it;
-          if (node["target"]) {
-            const auto target_str = node["target"].as<std::string>();
-            if (target_str == repo->target()) {
-              (*it)["hash"] = repo->repo_hash();
-              if (!some_hash_was_updated) {
-                some_hash_was_updated = true;
-              }
+        for (auto it = config.begin(); it != config.end(); ++it) {
+          if ((*it)["target"]
+           && (*it)["target"].as<std::string>() == repo->target()) {
+            (*it)["hash"] = repo->repo_hash();
+            if (!some_hash_was_updated) {
+              some_hash_was_updated = true;
             }
           }
         }

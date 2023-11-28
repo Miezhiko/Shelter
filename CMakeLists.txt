@@ -5,7 +5,7 @@ include(ExternalProject)
 
 project (shelter)
 
-set(VERSION 2.0.8)
+set(VERSION 2.0.9)
 
 option(USE_LTO "Use link time optimization" TRUE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION USE_LTO)
@@ -28,7 +28,6 @@ ExternalProject_Add(lyra
   CMAKE_ARGS
     -DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
 )
-
 
 if (MSVC)
 set(YAML_CPP_SHARED_LIBS ON)

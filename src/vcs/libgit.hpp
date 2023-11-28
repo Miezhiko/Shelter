@@ -6,6 +6,21 @@
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
+class GitRepoGuard final {
+  public:
+  GitRepoGuard(git_repository* repo)
+    : repo(repo) {}
+  ~GitRepoGuard() {
+    if (repo) {
+      git_repository_state_cleanup(repo);
+      git_repository_free(repo);
+    }
+    git_libgit2_shutdown();
+  }
+  private:
+  git_repository* repo;
+};
+
 namespace {
   void cleanRepository(git_repository* repo) {
     git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
@@ -82,23 +97,10 @@ namespace {
 template <> void Repo <VCS::Git> :: pull (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
-  const auto& repo_branch   = branch();
-  const auto& repo_path     = target();
-  const auto& repo_upstream = upstream();
-  auto local_hash           = repo_hash();
-
-  git_repository* repo    = nullptr;
-  git_reference* head_ref = nullptr;
-  git_remote* remote      = nullptr;
-  const char* branch_name = nullptr;
-
-  bool connected = false;
-  std::string remote_hash;
-  std::string_view upstream_remote;
-
-  std::vector<std::string> upstream_split;
-  std::stringstream ss(repo_upstream);
-  std::string token;
+  const auto& repo_path = target();
+  git_repository* repo  = nullptr;
+  
+  GitRepoGuard _grg(repo);
 
   git_libgit2_init();
   int error = git_repository_open(&repo, repo_path.data());
@@ -109,26 +111,29 @@ template <> void Repo <VCS::Git> :: pull (
     return;
   }
 
+  git_reference* head_ref = nullptr;
   error = git_repository_head(&head_ref, repo);
   if (error < 0) {
     std::cout << "libgit2 repository head error: "
               << git_error_last()->message << std::endl;
-    goto git_pull_shutdown;
+    return;
   }
 
+  const char* branch_name = nullptr;
   error = git_branch_name(&branch_name, head_ref);
   if (error < 0) {
     std::cout << "libgit2 branch name error: "
               << git_error_last()->message << std::endl;
-    goto git_pull_shutdown;
+    return;
   }
 
+  const auto& repo_branch = branch();
   if (branch_name != repo_branch) {
     error = git_reference_dwim(&head_ref, repo, repo_branch.c_str());
     if (error < 0) {
       std::cout << "git_reference_dwim error: "
                 << git_error_last()->message << std::endl;
-      goto git_pull_shutdown;
+      return;
     }
     git_checkout_options gcopts = GIT_CHECKOUT_OPTIONS_INIT;
     const git_oid* target_oid = git_reference_target(head_ref);
@@ -139,7 +144,7 @@ template <> void Repo <VCS::Git> :: pull (
     if (target_obj == nullptr) {
       std::cout << "can't checkout to "
                 << repo_branch << std::endl;
-      goto git_pull_shutdown;
+      return;
     }
 
     error = git_checkout_tree( repo
@@ -149,7 +154,7 @@ template <> void Repo <VCS::Git> :: pull (
       std::cout << "git_checkout_tree error: "
                 << git_error_last()->message << std::endl;
       git_object_free(target_obj);
-      goto git_pull_shutdown;
+      return;
     }
 
     git_object_free(target_obj);
@@ -160,6 +165,7 @@ template <> void Repo <VCS::Git> :: pull (
     }
   }
 
+  auto local_hash = repo_hash();
   if (local_hash.empty()) {
     git_oid commit_oid;
     const git_oid *commit_head_oid = git_reference_target(head_ref);
@@ -172,22 +178,29 @@ template <> void Repo <VCS::Git> :: pull (
     set_hash( local_hash );
   }
 
+  std::vector<std::string> upstream_split;
+  const auto& repo_upstream = upstream();
+  std::stringstream ss(repo_upstream);
+  std::string token;
   while (getline(ss, token, ' ')) {
     upstream_split.push_back(token);
   }
 
-  upstream_remote = upstream_split[0];
+  git_remote* remote = nullptr;
+  std::string_view upstream_remote = upstream_split[0];
   error = git_remote_lookup(&remote, repo, upstream_remote.data());
   if (error < 0) {
     std::cout << "git_remote_lookup error: "
               << git_error_last()->message << std::endl;
-    goto git_pull_shutdown;
+    return;
   }
 
   error = git_remote_connect( remote
                             , GIT_DIRECTION_FETCH
                             , NULL, NULL, NULL);
 
+  std::string remote_hash;
+  bool connected = false;
   if (error < 0) {
     remote_hash = get_remote_hash( repo_upstream );
   } else {
@@ -198,7 +211,7 @@ template <> void Repo <VCS::Git> :: pull (
     if (error < 0) {
       std::cout << "git_remote_ls error: " << git_error_last()->message << std::endl;
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
     char oid[GIT_OID_SHA1_HEXSIZE + 1] = {0};
     git_oid_fmt(oid, &refs[0]->oid);
@@ -220,7 +233,7 @@ template <> void Repo <VCS::Git> :: pull (
     if (error != 0) {
       std::cout << "git_remote_fetch error: " << git_error_last()->message << std::endl;
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     std::string upstream_branch =
@@ -239,7 +252,7 @@ template <> void Repo <VCS::Git> :: pull (
       std::cout << "git_branch_lookup error code: "
                 << error << std::endl;
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     git_annotated_commit* commit = nullptr;
@@ -249,7 +262,7 @@ template <> void Repo <VCS::Git> :: pull (
                 << git_error_last()->message << std::endl;
       git_reference_free(branch_ref);
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     const git_oid* commit_oid = git_annotated_commit_id(commit);
@@ -261,7 +274,7 @@ template <> void Repo <VCS::Git> :: pull (
                 << git_error_last()->message << std::endl;
       git_reference_free(branch_ref);
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
@@ -272,7 +285,7 @@ template <> void Repo <VCS::Git> :: pull (
                 << git_error_last()->message << std::endl;
       git_reference_free(branch_ref);
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     git_reference* local_branch_ref = nullptr;
@@ -282,7 +295,7 @@ template <> void Repo <VCS::Git> :: pull (
                 << git_error_last()->message << std::endl;
       git_reference_free(branch_ref);
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     git_reference *new_target_ref;
@@ -293,7 +306,7 @@ template <> void Repo <VCS::Git> :: pull (
       git_reference_free(local_branch_ref);
       git_reference_free(branch_ref);
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     git_reference_free(new_target_ref);
@@ -305,7 +318,7 @@ template <> void Repo <VCS::Git> :: pull (
       git_reference_free(local_branch_ref);
       git_reference_free(branch_ref);
       git_remote_free(remote);
-      goto git_pull_shutdown;
+      return;
     }
 
     git_annotated_commit_free(commit);
@@ -322,13 +335,7 @@ template <> void Repo <VCS::Git> :: pull (
   set_hash(remote_hash);
 
   git_reference_free(head_ref);
-
   git_remote_free(remote);
-
-  git_pull_shutdown:
-  git_repository_state_cleanup(repo);
-  git_repository_free(repo);
-  git_libgit2_shutdown();
 }
 
 template <> void Repo <VCS::Git> :: rebase (

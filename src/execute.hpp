@@ -9,7 +9,8 @@
 #include <sstream>
 #include <array>
 
-std::string exec(const char* cmd) {
+std::string
+exec(const char* cmd) {
   #ifdef _WIN32
   std::array<char, 128> buffer;
   std::stringstream result;

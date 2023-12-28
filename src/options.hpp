@@ -7,16 +7,33 @@ class GlobalOptions final {
   bool clean;
   bool verbose;
   public:
-  bool do_clean() const {
+
+  GlobalOptions()
+    : clean(true)
+    , verbose(true) {};
+
+  GlobalOptions( bool c
+               , bool v)
+    : clean(c)
+    , verbose(v) {};
+
+  bool
+  do_clean() const {
     return clean;
   }
-  bool is_verbose() const {
+
+  bool
+  is_verbose() const {
     return verbose;
   }
-  void set_verbose(bool v) {
+
+  void
+  set_verbose(bool v) {
     this->verbose = v;
   }
-  void parse_options(const std::string& yaml_file) {
+
+  void
+  parse_options(const std::string& yaml_file) {
     const auto& options = YAML::LoadFile(yaml_file);
     auto global_options = std::make_shared<GlobalOptions>();
     if (options["clean"]) {
@@ -26,11 +43,4 @@ class GlobalOptions final {
       this->verbose = options["verbose"].as<bool>();
     }
   }
-  GlobalOptions()
-    : clean(true)
-    , verbose(true) {};
-  GlobalOptions( bool c
-               , bool v)
-    : clean(c)
-    , verbose(v) {};
 };

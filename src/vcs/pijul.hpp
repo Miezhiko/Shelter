@@ -2,7 +2,8 @@
 
 #include "repository.hpp"
 
-template <> void Repo <VCS::Pijul> :: pull (
+template <> void
+Repo <VCS::Pijul> :: pull (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
   const auto pull_cmd = "pijul pull";
@@ -12,7 +13,8 @@ template <> void Repo <VCS::Pijul> :: pull (
   }
 }
 
-template <> void Repo <VCS::Pijul> :: rebase (
+template <> void
+Repo <VCS::Pijul> :: rebase (
   const std::shared_ptr<GlobalOptions>&
 ) {
   std::cout << "NOT IMPLEMENTED!" << std::endl;

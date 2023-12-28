@@ -1,7 +1,6 @@
 #pragma once
 
-struct add_command
-{
+struct add_command {
   bool show_help = false;
   std::string directory; // current directory?
   std::string action    = "pull";
@@ -9,8 +8,7 @@ struct add_command
   std::string upstream  = "origin master";
   std::string vcs       = "git";
 
-  add_command(lyra::cli & cli)
-  {
+  add_command(lyra::cli & cli) {
     cli.add_argument(
       lyra::command(
         "add", [this](const lyra::group & g) { this->do_command(g); })
@@ -43,8 +41,8 @@ struct add_command
     );
   }
 
-  void do_command(const lyra::group & g)
-  {
+  void
+  do_command(const lyra::group & g) {
     if (directory.empty() || directory == ".") {
       directory = std::filesystem::current_path().generic_string();
     }

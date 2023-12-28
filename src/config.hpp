@@ -25,22 +25,23 @@ static const char* OPTIONS_FILE = ".shelter_options.yml";
 static const char* CONFIG_FILE  = ".shelter.yml";
 
 namespace {
-  template <VCS T>
-  const auto makeRepo = [] (RepoArgs args, std::string hash_str) {
+  template <VCS T> const auto
+  makeRepo = [] (const RepoArgs& args, const std::string& hash_str) {
     return std::make_shared<Repo<T>>(args, hash_str);
   };
 
   static std::unordered_map< std::string
-      , std::function<std::shared_ptr<Repository>
-              (RepoArgs args, std::string hash_str)>
-      > const VCSTYPE =
+       , std::function<std::shared_ptr<Repository>
+              (RepoArgs args, std::string hash_str)> > const
+  VCSTYPE =
     { { "git",        makeRepo<VCS::GitShell> }
     , { "pijul",      makeRepo<VCS::Pijul>    }
     , { "git shell",  makeRepo<VCS::GitShell> }
     };
 }
 
-const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& config) {
+const std::vector<std::shared_ptr<Repository>>
+parse_config(const YAML::Node& config) {
   std::vector<std::shared_ptr<Repository>> result;
   result.reserve(config.size());
   for (const auto& node : config) {
@@ -83,7 +84,8 @@ const std::vector<std::shared_ptr<Repository>> parse_config(const YAML::Node& co
   return result;
 }
 
-void save_config(YAML::Node& config, const std::string& conf) {
+void
+save_config(YAML::Node& config, const std::string& conf) {
   std::ofstream fout(conf);
   fout << config;
   fout.flush();

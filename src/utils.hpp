@@ -4,14 +4,15 @@
 
 namespace utils {
 
-const char* get_home_dir() {
+const char*
+get_home_dir() {
   #ifdef unix
   #pragma GCC diagnostic push
   #pragma GCC diagnostic ignored "-Wpedantic"
   #pragma GCC diagnostic ignored "-Wnarrowing"
     const static volatile char A = 'a';
     const char HOME[5] = {A-25, A-18, A-20, A-28, 0};
-    auto HomeDirectory = getenv(HOME);
+    const auto HomeDirectory = getenv(HOME);
   #pragma GCC diagnostic pop
   #elif defined(_WIN32)
     char* HomeDirectory;

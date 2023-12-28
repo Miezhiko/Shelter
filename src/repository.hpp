@@ -9,19 +9,22 @@
 enum class VCS { Git, Pijul, GitShell };
 enum class Action { Pull, Rebase, Unkown };
 
-static std::unordered_map<std::string, Action> const STRACTION =
+static std::unordered_map<std::string, Action> const
+STRACTION =
   { { "pull",    Action::Pull   }
   , { "rebase",  Action::Rebase }
   };
 
-static std::unordered_map<std::string, std::string> const MIGMA =
+static std::unordered_map<std::string, std::string> const
+MIGMA =
   { { ".migma.py",    "python" }
   , { ".migma.sh",    "bash" }
   , { ".migma.raku",  "raku" }
   , { ".migma.pl",    "perl" }
   };
 
-std::ostream& operator << (std::ostream& os, const Action& a) {
+std::ostream& operator
+<< (std::ostream& os, const Action& a) {
   auto it = std::find_if( std::begin(STRACTION), std::end(STRACTION)
                         , [&a](auto&& p) { return p.second == a; } );
 
@@ -42,6 +45,7 @@ class RepoArgs {
   std::string branch;
   Action action;
   public:
+
   RepoArgs(std::string t, std::string a, std::string u, std::string b)
     : target(t), upstream(u), branch(b) {
     const auto it = STRACTION.find(a);
@@ -51,6 +55,7 @@ class RepoArgs {
       action = Action::Unkown;
     }
   }
+
   friend class Repository;
 };
 
@@ -58,14 +63,18 @@ class Repository {
   RepoArgs args;
   std::string hash;
   bool hash_updated;
-  bool navigate() const {
+
+  bool
+  navigate() const {
     if (std::filesystem::exists(args.target)) {
       std::filesystem::current_path(args.target);
       return true;
     }
     return false;
   }
-  void migma(const std::shared_ptr<GlobalOptions>& opts) const {
+
+  void
+  migma(const std::shared_ptr<GlobalOptions>& opts) const {
     const std::filesystem::path targetPath(args.target);
     if (std::filesystem::exists(targetPath)) {
       for (const auto& m : MIGMA) {
@@ -82,24 +91,45 @@ class Repository {
       }
     }
   }
-  virtual void pull   (const std::shared_ptr<GlobalOptions>&) {};
-  virtual void rebase (const std::shared_ptr<GlobalOptions>&) {};
+
+  virtual void
+  pull   (const std::shared_ptr<GlobalOptions>&) {};
+
+  virtual void
+  rebase (const std::shared_ptr<GlobalOptions>&) {};
+
   public:
-  Repository(const RepoArgs& a, std::string h)
+  Repository(const RepoArgs& a, const std::string& h)
     : args(a), hash(h), hash_updated(false) {};
-  const std::string_view target() const { return args.target;   }
-  const std::string upstream() const    { return args.upstream; }
-  const std::string branch() const      { return args.branch;   }
-  const std::string repo_hash() const   { return hash;          }
-  bool is_hash_updated() const          { return hash_updated;  }
-  void set_hash(std::string h) {
+
+  virtual ~Repository() {};
+
+  const std::string_view
+  target() const          { return args.target;   }
+
+  const std::string&
+  upstream() const        { return args.upstream; }
+
+  const std::string&
+  branch() const          { return args.branch;   }
+
+  const std::string&
+  repo_hash() const       { return hash;          }
+
+  const bool&
+  is_hash_updated() const { return hash_updated;  }
+
+  void
+  set_hash(const std::string& h) {
     if (hash != h) {
       std::cout << "new hash: " << h << std::endl;
       hash = h;
       hash_updated = true;
     }
   }
-  void process(const std::shared_ptr<GlobalOptions>& opts) {
+
+  void
+  process(const std::shared_ptr<GlobalOptions>& opts) {
     if (navigate()) {
       switch (args.action) {
         case Action::Pull: {
@@ -120,29 +150,38 @@ class Repository {
       }
     }
   }
-  const std::string details() {
+
+  const
+  std::string details() {
     std::stringstream details;
     details << args.target
             << " (" << args.branch
             << ") [" << args.action << "]";
     return details.str();
   }
-  friend std::ostream& operator<< (std::ostream& os, const Repository& r) {
+
+  friend std::ostream& operator
+  << (std::ostream& os, const Repository& r) {
     os << r.target();
     return os;
   }
-  friend std::ostream& operator<< (std::ostream& os, const Repository* r) {
+
+  friend std::ostream& operator
+  << (std::ostream& os, const Repository* r) {
     os << r->target();
     return os;
   }
-  virtual ~Repository() {};
 };
 
 template <VCS G>
 class Repo final : public Repository {
-  virtual void pull   (const std::shared_ptr<GlobalOptions>&);
-  virtual void rebase (const std::shared_ptr<GlobalOptions>&);
+  virtual void
+  pull (const std::shared_ptr<GlobalOptions>&);
+
+  virtual void
+  rebase (const std::shared_ptr<GlobalOptions>&);
+
   public:
-  Repo(const RepoArgs& a, std::string h)
+  Repo(const RepoArgs& a, const std::string& h)
     : Repository(a, h) {};
 };

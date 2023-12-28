@@ -1,6 +1,7 @@
 #pragma once
 
 #include <git2.h>
+#include <ranges>
 
 #include "repository.hpp"
 
@@ -22,7 +23,8 @@ class GitRepoGuard final {
 };
 
 namespace {
-  void cleanRepository(git_repository* repo) {
+  void
+  cleanRepository(git_repository* repo) {
     git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
     status_opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
     status_opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
@@ -66,7 +68,8 @@ namespace {
     git_status_list_free(status_list);
   }
 
-  const std::string get_remote_hash(const std::string& upstream) {
+  const std::string
+  get_remote_hash(const std::string& upstream) {
     const std::string ls_remote_cmd = "git ls-remote " + upstream;
     std::string ls_remote = exec(ls_remote_cmd.c_str());
     std::string::size_type tpos = ls_remote.find('\t');
@@ -76,7 +79,8 @@ namespace {
     return ls_remote;
   }
 
-  void clean(git_repository* repo) {
+  void
+  clean(git_repository* repo) {
     git_object* target = nullptr;
     int error = git_revparse_single(&target, repo, "HEAD");
     if (error != 0) {
@@ -94,7 +98,8 @@ namespace {
   }
 }
 
-template <> void Repo <VCS::Git> :: pull (
+template <> void
+Repo <VCS::Git> :: pull (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
   const auto& repo_path = target();
@@ -179,7 +184,7 @@ template <> void Repo <VCS::Git> :: pull (
   }
 
   std::vector<std::string> upstream_split;
-  const auto& repo_upstream = upstream();
+  const auto repo_upstream = upstream();
   std::stringstream ss(repo_upstream);
   std::string token;
   while (getline(ss, token, ' ')) {
@@ -202,7 +207,7 @@ template <> void Repo <VCS::Git> :: pull (
   std::string remote_hash;
   bool connected = false;
   if (error < 0) {
-    remote_hash = get_remote_hash( repo_upstream );
+    remote_hash = get_remote_hash(repo_upstream);
   } else {
     connected = true;
     const git_remote_head **refs;
@@ -338,7 +343,8 @@ template <> void Repo <VCS::Git> :: pull (
   git_remote_free(remote);
 }
 
-template <> void Repo <VCS::Git> :: rebase (
+template <> void
+Repo <VCS::Git> :: rebase (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
   git_libgit2_init();
@@ -407,7 +413,7 @@ template <> void Repo <VCS::Git> :: rebase (
     set_hash( local_hash );
   }
 
-  const auto& repo_upstream = upstream();
+  const auto repo_upstream = upstream();
   const auto remote_hash = get_remote_hash( repo_upstream );
 
   if (local_hash == remote_hash) {
@@ -419,13 +425,13 @@ template <> void Repo <VCS::Git> :: rebase (
     clean(repo);
   }
 
-  std::string pull_cmd = "git pull --rebase " + repo_upstream;
+  const auto pull_cmd = "git pull --rebase " + repo_upstream;
   const auto pull_output = exec(pull_cmd.c_str());
   if (opts->is_verbose()) {
     std::cout << pull_output << std::endl;
   }
 
-  std::string push_cmd = "git push --force origin " + repo_branch;
+  const auto push_cmd = "git push --force origin " + repo_branch;
   const auto push_output = exec(push_cmd.c_str());
   if (opts->is_verbose()) {
     std::cout << push_output << std::endl;

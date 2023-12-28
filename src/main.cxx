@@ -19,7 +19,8 @@
 // The extra level of indirection causes the value of the macro to be stringified instead of the name of the macro.
 #define STRINGIFY_M(x) STRINGIFY(x)
 
-void show_version(bool display_git_stats = false) {
+void
+show_version(const bool display_git_stats = false) {
   #ifdef VERSION_CMAKE
   std::cout << "Shelter v" << STRINGIFY_M(VERSION_CMAKE) << std::endl;
   #endif
@@ -32,7 +33,8 @@ void show_version(bool display_git_stats = false) {
   }
 }
 
-int main(int argc, char *argv[]) {
+int
+main(int argc, char *argv[]) {
   auto verbose  = false;
   auto help     = false;
   auto version  = false;
@@ -72,8 +74,8 @@ int main(int argc, char *argv[]) {
 
   const auto HomeDirectory = utils::get_home_dir();
 
-  const std::string options_file = HomeDirectory + std::string("/") + OPTIONS_FILE;
-  const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
+  const auto options_file = HomeDirectory + std::string("/") + OPTIONS_FILE;
+  const auto config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
 
   std::shared_ptr<GlobalOptions> otpions = std::make_shared<GlobalOptions>();
   
@@ -109,8 +111,11 @@ int main(int argc, char *argv[]) {
     if (some_hash_was_updated) {
       save_config(config, config_file);
     }
+
   } else {
-    std::cout << "missing config: " << config_file << std::endl;
+    std::cout << "missing config: "
+              << config_file
+              << std::endl;
   }
 
   return 0;

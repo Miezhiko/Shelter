@@ -1,12 +1,10 @@
 #pragma once
 
-struct rm_command
-{
+struct rm_command {
   bool show_help = false;
   std::string directory;
 
-  rm_command(lyra::cli & cli)
-  {
+  rm_command(lyra::cli & cli) {
     cli.add_argument(
       lyra::command(
         "rm", [this](const lyra::group & g) { this->do_command(g); })
@@ -19,8 +17,8 @@ struct rm_command
     );
   }
 
-  void do_command(const lyra::group & g)
-  {
+  void
+  do_command(const lyra::group & g) {
     if (directory.empty() || directory == ".") {
       directory = std::filesystem::current_path().generic_string();
     }

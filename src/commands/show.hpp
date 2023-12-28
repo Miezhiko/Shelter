@@ -2,13 +2,11 @@
 
 #include <tuple>
 
-struct show_command
-{
+struct show_command {
   bool show_help = false;
   std::string directory;
 
-  show_command(lyra::cli & cli)
-  {
+  show_command(lyra::cli & cli) {
     cli.add_argument(
       lyra::command(
         "show", [this](const lyra::group & g) { this->do_command(g); })
@@ -21,8 +19,8 @@ struct show_command
     );
   }
 
-  void do_command(const lyra::group & g)
-  {
+  void
+  do_command(const lyra::group & g) {
     if (show_help) {
       std::cout << g;
     } else {

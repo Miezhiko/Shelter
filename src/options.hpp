@@ -35,7 +35,6 @@ class GlobalOptions final {
   void
   parse_options(const std::string& yaml_file) {
     const auto& options = YAML::LoadFile(yaml_file);
-    auto global_options = std::make_shared<GlobalOptions>();
     if (options["clean"]) {
       this->clean = options["clean"].as<bool>();
     }

@@ -24,7 +24,7 @@ struct show_command {
     if (show_help) {
       std::cout << g;
     } else {
-      const auto HomeDirectory = utils::get_home_dir();
+      const auto& HomeDirectory = utils::get_home_dir();
       const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
       if (std::filesystem::exists(config_file)) {
         auto config = YAML::LoadFile(config_file);
@@ -40,11 +40,11 @@ struct show_command {
           > strings;
           strings.reserve(config.size());
           for(YAML::Node node : config) {
-            const auto target_str = node["target"].as<std::string>();
-            const auto branch_str = node["branch"].as<std::string>();
-            const auto task_str = node["task"].as<std::string>();
-            const auto target_str_size = target_str.size();
-            const auto branch_str_size = branch_str.size();
+            const auto& target_str      = node["target"].as<std::string>();
+            const auto& branch_str      = node["branch"].as<std::string>();
+            const auto& task_str        = node["task"].as<std::string>();
+            const auto& target_str_size = target_str.size();
+            const auto& branch_str_size = branch_str.size();
             max_target_len = std::max(max_target_len, target_str_size);
             max_branch_len = std::max(max_branch_len, branch_str_size);
             strings.push_back(
@@ -69,10 +69,10 @@ struct show_command {
         } else {
           bool found = false;
           for(YAML::Node node : config) {
-            const auto target_str = node["target"].as<std::string>();
+            const auto& target_str = node["target"].as<std::string>();
             if (directory == target_str) {
-              const auto task_str   = node["task"]  .as<std::string>();
-              const auto branch_str = node["branch"].as<std::string>();
+              const auto& task_str   = node["task"]  .as<std::string>();
+              const auto& branch_str = node["branch"].as<std::string>();
               std::cout << target_str
                         << " (" << branch_str << ")"
                         << " [" << task_str << "]" << std::endl;

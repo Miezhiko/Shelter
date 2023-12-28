@@ -25,13 +25,13 @@ struct rm_command {
     if (show_help) {
       std::cout << g;
     } else {
-      const auto HomeDirectory = utils::get_home_dir();
+      const auto& HomeDirectory = utils::get_home_dir();
       const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
       if (std::filesystem::exists(config_file)) {
         auto config = YAML::LoadFile(config_file);
         unsigned int node_index = 0;
         for(YAML::Node node : config) {
-          const auto target_str = node["target"].as<std::string>();
+          const auto& target_str = node["target"].as<std::string>();
           if (target_str == directory) {
             if (config.remove(node_index)) {
               save_config(config, config_file);

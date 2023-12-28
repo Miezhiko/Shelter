@@ -49,7 +49,7 @@ struct add_command {
     if (show_help) {
       std::cout << g;
     } else {
-      const auto HomeDirectory = utils::get_home_dir();
+      const auto& HomeDirectory = utils::get_home_dir();
       const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
       if (std::filesystem::exists(config_file)) {
         auto config = YAML::LoadFile(config_file);

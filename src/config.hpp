@@ -63,9 +63,9 @@ parse_config(const YAML::Node& config) {
         hash_str = hashNode.as<std::string>();
       }
 
-      if(const auto vcsNode = node["vcs"]) {
+      if(const auto& vcsNode = node["vcs"]) {
         const auto vcs = vcsNode.as<std::string>();
-        const auto it = VCSTYPE.find(vcs);
+        const auto& it = VCSTYPE.find(vcs);
         if (it != VCSTYPE.end()) {
           result.push_back( it->second(args, hash_str) );
         } else {

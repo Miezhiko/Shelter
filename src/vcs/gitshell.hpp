@@ -42,7 +42,7 @@ template <> void
 Repo <VCS::GitShell> :: pull (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
-  const auto repo_branch = branch();
+  const auto& repo_branch = branch();
   if (shell_get_branch() != repo_branch) {
     const auto checkout_cmd = "git checkout " + repo_branch;
     const auto output = exec(checkout_cmd.c_str());
@@ -54,10 +54,10 @@ Repo <VCS::GitShell> :: pull (
   auto local_hash = repo_hash();
   if (local_hash.empty()) {
     local_hash = shell_get_local_hash();
-    set_hash( local_hash );
+    set_hash(local_hash);
   }
 
-  const auto repo_upstream = upstream();
+  const auto& repo_upstream = upstream();
   const auto remote_hash = shell_get_remote_hash(repo_upstream);
 
   if (local_hash == remote_hash) {
@@ -82,7 +82,7 @@ template <> void
 Repo <VCS::GitShell> :: rebase (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
-  const auto repo_branch = branch();
+  const auto& repo_branch = branch();
   if (shell_get_branch() != repo_branch) {
     const auto checkout_cmd = "git checkout " + repo_branch;
     const auto output = exec(checkout_cmd.c_str());
@@ -97,7 +97,7 @@ Repo <VCS::GitShell> :: rebase (
     set_hash( local_hash );
   }
 
-  const auto repo_upstream = upstream();
+  const auto& repo_upstream = upstream();
   const auto remote_hash = shell_get_remote_hash(repo_upstream);
 
   if (local_hash == remote_hash) {

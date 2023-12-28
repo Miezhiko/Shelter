@@ -184,7 +184,7 @@ Repo <VCS::Git> :: pull (
   }
 
   std::vector<std::string> upstream_split;
-  const auto repo_upstream = upstream();
+  const auto& repo_upstream = upstream();
   std::stringstream ss(repo_upstream);
   std::string token;
   while (getline(ss, token, ' ')) {
@@ -413,7 +413,7 @@ Repo <VCS::Git> :: rebase (
     set_hash( local_hash );
   }
 
-  const auto repo_upstream = upstream();
+  const auto& repo_upstream = upstream();
   const auto remote_hash = get_remote_hash( repo_upstream );
 
   if (local_hash == remote_hash) {

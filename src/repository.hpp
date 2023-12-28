@@ -48,7 +48,7 @@ class RepoArgs {
 
   RepoArgs(std::string t, std::string a, std::string u, std::string b)
     : target(t), upstream(u), branch(b) {
-    const auto it = STRACTION.find(a);
+    const auto& it = STRACTION.find(a);
     if (it != STRACTION.end()) {
       action = it->second;
     } else {

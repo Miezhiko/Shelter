@@ -72,7 +72,7 @@ main(int argc, char *argv[]) {
     return 0;
   }
 
-  const auto HomeDirectory = utils::get_home_dir();
+  const auto& HomeDirectory = utils::get_home_dir();
 
   const auto options_file = HomeDirectory + std::string("/") + OPTIONS_FILE;
   const auto config_file = HomeDirectory + std::string("/") + CONFIG_FILE;

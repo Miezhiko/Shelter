@@ -27,44 +27,46 @@ namespace {
   cleanRepository(git_repository* repo) {
     git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
     status_opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-    status_opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
+    status_opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+                        GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
                         GIT_STATUS_OPT_INCLUDE_IGNORED;
-
+  
     git_status_list* status_list = nullptr;
-    int error = git_status_list_new(&status_list, repo, &status_opts);
-    if (error != 0) {
-      std::cout << "Failed to get repository status: " << git_error_last()->message << std::endl;
+    if (git_status_list_new(&status_list, repo, &status_opts) != 0) {
+      std::cout << "Failed to get repository status: "
+                << git_error_last()->message << std::endl;
       return;
     }
-
+  
     git_index* repo_index = nullptr;
-    error = git_repository_index(&repo_index, repo);
-    if (error != 0) {
-      std::cout << "Failed to get repository index: " << git_error_last()->message << std::endl;
+    if (git_repository_index(&repo_index, repo) != 0) {
+      std::cout << "Failed to get repository index: "
+                << git_error_last()->message << std::endl;
       git_status_list_free(status_list);
       return;
     }
-
+  
     size_t entry_count = git_status_list_entrycount(status_list);
     for (size_t i = 0; i < entry_count; ++i) {
       const git_status_entry* entry = git_status_byindex(status_list, i);
-      const char* path = entry->head_to_index->new_file.path;
-
-      if (entry->status == GIT_STATUS_WT_NEW || entry->status == GIT_STATUS_WT_MODIFIED ||
-          entry->status == GIT_STATUS_WT_DELETED || entry->status == GIT_STATUS_WT_TYPECHANGE ||
-          entry->status == GIT_STATUS_IGNORED) {
-          error = git_index_remove_bypath(repo_index, path);
-        if (error != 0) {
-          std::cout << "Failed to remove file '" << path << "': " << git_error_last()->message << std::endl;
+      if (entry->head_to_index &&
+          (entry->status & (GIT_STATUS_WT_NEW | GIT_STATUS_WT_MODIFIED |
+                           GIT_STATUS_WT_DELETED | GIT_STATUS_WT_TYPECHANGE |
+                           GIT_STATUS_IGNORED))) {
+        const char* path = entry->head_to_index->new_file.path;
+        if (git_index_remove_bypath(repo_index, path) != 0) {
+          std::cout << "Failed to remove file '" << path << "': "
+                    << git_error_last()->message << std::endl;
         }
       }
     }
 
-    error = git_index_write(repo_index);
-    if (error != 0) {
-      std::cout << "Failed to write index: " << git_error_last()->message << std::endl;
+    if (git_index_write(repo_index) != 0) {
+      std::cout << "Failed to write index: "
+                << git_error_last()->message << std::endl;
     }
 
+    git_index_free(repo_index);
     git_status_list_free(status_list);
   }
 

@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.20)
-set (CMAKE_CXX_STANDARD 20)
+set (CMAKE_CXX_STANDARD 23)
 
 include(ExternalProject)
 
 project (shelter)
 
-set(VERSION 2.1.1)
+set(VERSION 2.2.0)
 
 option(USE_LTO "Use link time optimization" TRUE)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION USE_LTO)

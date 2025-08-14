@@ -8,6 +8,11 @@
 #include <string>
 #include <sstream>
 #include <array>
+#include <expected>
+#include <format>
+
+using ShellResult = std::expected< std::string
+                                 , std::string >;
 
 [[nodiscard]] std::string
 exec(const char* cmd) {
@@ -35,4 +40,20 @@ exec(const char* cmd) {
   }
   return result.str();
   #endif
+}
+
+[[nodiscard]] constexpr std::string
+trim_newlines(std::string str) noexcept {
+  std::erase(str, '\n');
+  return str;
+}
+
+[[nodiscard]] ShellResult
+safe_exec(std::string_view command, bool trim = true) noexcept {
+  try {
+    return trim ? trim_newlines( exec(command.data()) )
+                : exec(command.data());
+  } catch (const std::exception& e) {
+    return std::unexpected(std::format("Command '{}' failed: {}", command, e.what()));
+  }
 }

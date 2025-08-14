@@ -49,7 +49,11 @@ struct add_command {
       directory = std::filesystem::current_path().generic_string();
     }
     if (branch.empty()) {
-      branch = gitshell::get_branch();
+      if (auto branchShell = gitshell::get_branch()) {
+        branch = branchShell.value();
+      } else {
+        branch = "master";
+      }
     }
     if (upstream.empty()) {
       upstream = "origin " + branch;

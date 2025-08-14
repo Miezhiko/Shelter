@@ -2,6 +2,11 @@
 
 #include <git2.h>
 #include <ranges>
+#include <string_view>
+#include <memory>
+#include <optional>
+#include <expected>
+#include <format>
 
 #include "repository.hpp"
 
@@ -9,94 +14,179 @@
 
 class GitRepoGuard final {
   public:
-  GitRepoGuard(git_repository* repo)
-    : repo(repo) {}
-  ~GitRepoGuard() {
-    if (repo) {
-      git_repository_state_cleanup(repo);
-      git_repository_free(repo);
+  explicit GitRepoGuard(git_repository* repo) noexcept
+    : repo_(repo) {}
+    
+  ~GitRepoGuard() noexcept {
+    if (repo_) {
+      git_repository_state_cleanup(repo_);
+      git_repository_free(repo_);
     }
     git_libgit2_shutdown();
   }
+
+  GitRepoGuard(const GitRepoGuard&)             = delete;
+  GitRepoGuard& operator=(const GitRepoGuard&)  = delete;
+  GitRepoGuard(GitRepoGuard&& other) noexcept : repo_(std::exchange(other.repo_, nullptr)) {}
+  GitRepoGuard& operator=(GitRepoGuard&& other) noexcept {
+    if (this != &other) {
+      std::swap(repo_, other.repo_);
+    }
+    return *this;
+  }
+  
+  git_repository* get() const noexcept { return repo_; }
+  explicit operator bool() const noexcept { return repo_ != nullptr; }
+  
   private:
-  git_repository* repo;
+  git_repository* repo_;
 };
 
+using GitResult       = std::expected<void, std::string>;
+using GitStringResult = std::expected<std::string, std::string>;
+
 namespace {
-  void
-  cleanRepository(git_repository* repo) {
+  [[nodiscard]] constexpr std::string_view get_git_error() noexcept {
+    const auto* error = git_error_last();
+    return error ? std::string_view{error->message} : "Unknown git error";
+  }
+
+  template<typename T, void(*Deleter)(T*)>
+  class GitResource {
+  public:
+    explicit GitResource(T* resource = nullptr) noexcept : resource_(resource) {}
+    ~GitResource() noexcept { if (resource_) Deleter(resource_); }
+    
+    GitResource(const GitResource&) = delete;
+    GitResource& operator=(const GitResource&) = delete;
+    GitResource(GitResource&& other) noexcept : resource_(std::exchange(other.resource_, nullptr)) {}
+    GitResource& operator=(GitResource&& other) noexcept {
+      if (this != &other) {
+        std::swap(resource_, other.resource_);
+      }
+      return *this;
+    }
+    
+    T* get() const noexcept { return resource_; }
+    T** address() noexcept { return &resource_; }
+    explicit operator bool() const noexcept { return resource_ != nullptr; }
+    T* release() noexcept { return std::exchange(resource_, nullptr); }
+    
+  private:
+    T* resource_;
+  };
+
+  using StatusList      = GitResource<git_status_list, git_status_list_free>;
+  using Index           = GitResource<git_index, git_index_free>;
+  using Reference       = GitResource<git_reference, git_reference_free>;
+  using Remote          = GitResource<git_remote, git_remote_free>;
+  using Object          = GitResource<git_object, git_object_free>;
+  using AnnotatedCommit = GitResource<git_annotated_commit, git_annotated_commit_free>;
+
+  [[nodiscard]] GitResult
+  cleanRepository(git_repository* repo) noexcept {
     git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
     status_opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
     status_opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
                         GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS |
                         GIT_STATUS_OPT_INCLUDE_IGNORED;
   
-    git_status_list* status_list = nullptr;
-    if (git_status_list_new(&status_list, repo, &status_opts) != 0) {
-      std::cout << "Failed to get repository status: "
-                << git_error_last()->message << std::endl;
-      return;
+    StatusList status_list;
+    if (const int error = git_status_list_new(status_list.address(), repo, &status_opts); error != 0) {
+      return std::unexpected(std::format("Failed to get repository status: {}", get_git_error()));
     }
   
-    git_index* repo_index = nullptr;
-    if (git_repository_index(&repo_index, repo) != 0) {
-      std::cout << "Failed to get repository index: "
-                << git_error_last()->message << std::endl;
-      git_status_list_free(status_list);
-      return;
+    Index repo_index;
+    if (const int error = git_repository_index(repo_index.address(), repo); error != 0) {
+      return std::unexpected(std::format("Failed to get repository index: {}", get_git_error()));
     }
   
-    size_t entry_count = git_status_list_entrycount(status_list);
-    for (size_t i = 0; i < entry_count; ++i) {
-      const git_status_entry* entry = git_status_byindex(status_list, i);
+    const size_t entry_count = git_status_list_entrycount(status_list.get());
+    for (const auto i : std::views::iota(0uz, entry_count)) {
+      const git_status_entry* entry = git_status_byindex(status_list.get(), i);
       if (entry->head_to_index &&
           (entry->status & (GIT_STATUS_WT_NEW | GIT_STATUS_WT_MODIFIED |
                            GIT_STATUS_WT_DELETED | GIT_STATUS_WT_TYPECHANGE |
                            GIT_STATUS_IGNORED))) {
         const char* path = entry->head_to_index->new_file.path;
-        if (git_index_remove_bypath(repo_index, path) != 0) {
-          std::cout << "Failed to remove file '" << path << "': "
-                    << git_error_last()->message << std::endl;
+        if (const int error = git_index_remove_bypath(repo_index.get(), path); error != 0) {
+          std::cout << std::format("Failed to remove file '{}': {}\n", path, get_git_error());
         }
       }
     }
 
-    if (git_index_write(repo_index) != 0) {
-      std::cout << "Failed to write index: "
-                << git_error_last()->message << std::endl;
+    if (const int error = git_index_write(repo_index.get()); error != 0) {
+      return std::unexpected(std::format("Failed to write index: {}", get_git_error()));
     }
 
-    git_index_free(repo_index);
-    git_status_list_free(status_list);
+    return {};
   }
 
-  const std::string
-  get_remote_hash(const std::string& upstream) {
-    const std::string ls_remote_cmd = "git ls-remote " + upstream;
-    std::string ls_remote = exec(ls_remote_cmd.c_str());
-    std::string::size_type tpos = ls_remote.find('\t');
-    if (tpos != std::string::npos) {
+  [[nodiscard]] GitStringResult
+  get_remote_hash(std::string_view upstream) noexcept {
+    const std::string ls_remote_cmd = std::format("git ls-remote {}", upstream);
+    const std::string ls_remote = exec(ls_remote_cmd.c_str());
+    
+    if (const auto tpos = ls_remote.find('\t'); tpos != std::string::npos) {
       return ls_remote.substr(0, tpos);
     }
     return ls_remote;
   }
 
-  void
-  clean(git_repository* repo) {
-    git_object* target = nullptr;
-    int error = git_revparse_single(&target, repo, "HEAD");
-    if (error != 0) {
-      std::cout << "git_revparse_single error: " << git_error_last()->message << std::endl;
-      return;
+  [[nodiscard]] GitResult
+  clean(git_repository* repo) noexcept {
+    Object target;
+    if (const int error = git_revparse_single(target.address(), repo, "HEAD"); error != 0) {
+      return std::unexpected(std::format("git_revparse_single error: {}", get_git_error()));
     }
-    error = git_reset(repo, target, GIT_RESET_HARD, NULL);
-    if (error != 0) {
-      std::cout << "git_reset error: " << git_error_last()->message << std::endl;
-      git_object_free(target);
-      return;
+    
+    if (const int error = git_reset(repo, target.get(), GIT_RESET_HARD, nullptr); error != 0) {
+      return std::unexpected(std::format("git_reset error: {}", get_git_error()));
     }
-    git_object_free(target);
-    cleanRepository(repo);
+    
+    return cleanRepository(repo);
+  }
+
+  [[nodiscard]] std::optional<std::string>
+  get_commit_hash(git_reference* head_ref) noexcept {
+    const git_oid* commit_head_oid = git_reference_target(head_ref);
+    if (!commit_head_oid) return std::nullopt;
+    
+    git_oid commit_oid;
+    git_oid_cpy(&commit_oid, commit_head_oid);
+    
+    std::string commit_hash(GIT_OID_HEXSZ, '\0');
+    git_oid_fmt(commit_hash.data(), &commit_oid);
+    
+    return commit_hash;
+  }
+
+  [[nodiscard]] std::vector<std::string>
+  split_upstream(std::string_view upstream) {
+    return upstream 
+      | std::views::split(' ') 
+      | std::views::transform([](auto&& range) { 
+          return std::string{range.begin(), range.end()}; 
+        })
+      | std::ranges::to<std::vector>();
+  }
+
+  [[nodiscard]] GitStringResult
+  get_remote_commit_hash(git_remote* remote) noexcept {
+    const git_remote_head **refs;
+    size_t refs_len;
+    
+    if (const int error = git_remote_ls(&refs, &refs_len, remote); error < 0) {
+      return std::unexpected(std::format("git_remote_ls error: {}", get_git_error()));
+    }
+    
+    if (refs_len == 0) {
+      return std::unexpected("No remote references found");
+    }
+    
+    std::string oid(GIT_OID_SHA1_HEXSIZE, '\0');
+    git_oid_fmt(oid.data(), &refs[0]->oid);
+    return oid;
   }
 }
 
@@ -107,246 +197,178 @@ Repo <VCS::Git> :: pull (
   const auto& repo_path = target();
   git_repository* repo  = nullptr;
   
-  GitRepoGuard _grg(repo);
-
   git_libgit2_init();
-  int error = git_repository_open(&repo, repo_path.data());
-  if (error < 0) {
-    std::cout << "libgit2 repository open error: "
-              << git_error_last()->message << std::endl;
-    git_libgit2_shutdown();
+  GitRepoGuard grg(repo);
+  
+  if (const int error = git_repository_open(&repo, repo_path.data()); error < 0) {
+    std::cout << std::format("libgit2 repository open error: {}\n", get_git_error());
     return;
   }
 
-  git_reference* head_ref = nullptr;
-  error = git_repository_head(&head_ref, repo);
-  if (error < 0) {
-    std::cout << "libgit2 repository head error: "
-              << git_error_last()->message << std::endl;
+  grg = GitRepoGuard(repo);
+
+  Reference head_ref;
+  if (const int error = git_repository_head(head_ref.address(), repo); error < 0) {
+    std::cout << std::format("libgit2 repository head error: {}\n", get_git_error());
     return;
   }
 
   const char* branch_name = nullptr;
-  error = git_branch_name(&branch_name, head_ref);
-  if (error < 0) {
-    std::cout << "libgit2 branch name error: "
-              << git_error_last()->message << std::endl;
+  if (const int error = git_branch_name(&branch_name, head_ref.get()); error < 0) {
+    std::cout << std::format("libgit2 branch name error: {}\n", get_git_error());
     return;
   }
 
   const auto& repo_branch = branch();
   if (branch_name != repo_branch) {
     if (!opts->do_force()) {
-      std::cout << "Not on " << repo_branch << ", skipping update!" << std::endl;
+      std::cout << std::format( "Not on {}, but on {}, skipping update!\n"
+                              , repo_branch, std::string(branch_name) );
       return;
     }
-    error = git_reference_dwim(&head_ref, repo, repo_branch.c_str());
-    if (error < 0) {
-      std::cout << "git_reference_dwim error: "
-                << git_error_last()->message << std::endl;
+    
+    Reference new_head_ref;
+    if (const int error = git_reference_dwim(new_head_ref.address(), repo, repo_branch.c_str()); error < 0) {
+      std::cout << std::format("git_reference_dwim error: {}\n", get_git_error());
       return;
     }
+    head_ref = std::move(new_head_ref);
+    
     git_checkout_options gcopts = GIT_CHECKOUT_OPTIONS_INIT;
-    const git_oid* target_oid = git_reference_target(head_ref);
+    const git_oid* target_oid = git_reference_target(head_ref.get());
 
-    git_object* target_obj = nullptr;
-    git_object_lookup(&target_obj, repo, target_oid, GIT_OBJ_ANY);
-
-    if (target_obj == nullptr) {
-      std::cout << "can't checkout to "
-                << repo_branch << std::endl;
+    Object target_obj;
+    if (const int error = git_object_lookup(target_obj.address(), repo, target_oid, GIT_OBJ_ANY); error < 0) {
+      std::cout << std::format("can't checkout to {}\n", repo_branch);
       return;
     }
 
-    error = git_checkout_tree( repo
-                             , target_obj
-                             , &gcopts);
-    if (error < 0) {
-      std::cout << "git_checkout_tree error: "
-                << git_error_last()->message << std::endl;
-      git_object_free(target_obj);
+    if (const int error = git_checkout_tree(repo, target_obj.get(), &gcopts); error < 0) {
+      std::cout << std::format("git_checkout_tree error: {}\n", get_git_error());
       return;
     }
-
-    git_object_free(target_obj);
 
     if (opts->is_verbose()) {
-      std::cout << "checkout to "
-                << repo_branch << " complete" << std::endl;
+      std::cout << std::format("checkout to {} complete\n", repo_branch);
     }
   }
 
   auto local_hash = repo_hash();
   if (local_hash.empty()) {
-    git_oid commit_oid;
-    const git_oid *commit_head_oid = git_reference_target(head_ref);
-    git_oid_cpy(&commit_oid, commit_head_oid);
-
-    char commit_hash[GIT_OID_HEXSZ + 1];
-    git_oid_fmt(commit_hash, &commit_oid);
-
-    local_hash = commit_hash;
-    set_hash( local_hash );
+    if (auto commit_hash = get_commit_hash(head_ref.get())) {
+      local_hash = *commit_hash;
+      set_hash(local_hash);
+    } else {
+      std::cout << "Failed to get commit hash\n";
+      return;
+    }
   }
 
-  std::vector<std::string> upstream_split;
-  const auto& repo_upstream = upstream();
-  std::stringstream ss(repo_upstream);
-  std::string token;
-  while (getline(ss, token, ' ')) {
-    upstream_split.push_back(token);
-  }
-
-  git_remote* remote = nullptr;
-  std::string_view upstream_remote = upstream_split[0];
-  error = git_remote_lookup(&remote, repo, upstream_remote.data());
-  if (error < 0) {
-    std::cout << "git_remote_lookup error: "
-              << git_error_last()->message << std::endl;
+  const auto upstream_split = split_upstream(upstream());
+  if (upstream_split.empty()) {
+    std::cout << "Invalid upstream configuration\n";
     return;
   }
 
-  error = git_remote_connect( remote
-                            , GIT_DIRECTION_FETCH
-                            , NULL, NULL, NULL);
-
-  std::string remote_hash;
-  bool connected = false;
-  if (error < 0) {
-    remote_hash = get_remote_hash(repo_upstream);
-  } else {
-    connected = true;
-    const git_remote_head **refs;
-    size_t refs_len;
-    error = git_remote_ls(&refs, &refs_len, remote);
-    if (error < 0) {
-      std::cout << "git_remote_ls error: " << git_error_last()->message << std::endl;
-      git_remote_free(remote);
-      return;
-    }
-    char oid[GIT_OID_SHA1_HEXSIZE + 1] = {0};
-    git_oid_fmt(oid, &refs[0]->oid);
-    remote_hash = oid;
+  Remote remote;
+  const auto& upstream_remote = upstream_split[0];
+  if (const int error = git_remote_lookup(remote.address(), repo, upstream_remote.c_str()); error < 0) {
+    std::cout << std::format("git_remote_lookup error: {}\n", get_git_error());
+    return;
   }
 
+  const int connect_error = git_remote_connect(remote.get(), GIT_DIRECTION_FETCH, nullptr, nullptr, nullptr);
+  
+  GitStringResult remote_hash_result;
+  bool connected = false;
+  
+  if (connect_error < 0) {
+    remote_hash_result = get_remote_hash(upstream());
+  } else {
+    connected = true;
+    remote_hash_result = get_remote_commit_hash(remote.get());
+  }
+
+  if (!remote_hash_result) {
+    std::cout << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
+    return;
+  }
+
+  const auto& remote_hash = *remote_hash_result;
   if (local_hash == remote_hash) {
-    std::cout << "repository " << this << " is up to date" << std::endl;
+    std::cout << "repository " << this << " is up to date\n";
     return;
   }
 
   if (opts->do_clean()) {
-    clean(repo);
+    if (auto clean_result = clean(repo); !clean_result) {
+      std::cout << std::format("Clean failed: {}\n", clean_result.error());
+      return;
+    }
   }
 
   if (connected) {
     git_fetch_options fetch_opts = GIT_FETCH_OPTIONS_INIT;
-    error = git_remote_fetch(remote, nullptr, &fetch_opts, nullptr);
-    if (error != 0) {
-      std::cout << "git_remote_fetch error: " << git_error_last()->message << std::endl;
-      git_remote_free(remote);
+    if (const int error = git_remote_fetch(remote.get(), nullptr, &fetch_opts, nullptr); error != 0) {
+      std::cout << std::format("git_remote_fetch error: {}\n", get_git_error());
       return;
     }
 
-    std::string upstream_branch =
-      upstream_split.size() > 1 ? upstream_split[1]
-                                : branch_name;
+    const std::string upstream_branch = upstream_split.size() > 1 ? upstream_split[1] : std::string{branch_name};
+    const std::string upstream_ref = std::format("{}/{}", upstream_remote, upstream_branch);
 
-    std::string upstream;
-    upstream.reserve(upstream_remote.size() + upstream_branch.size() + 1);
-    upstream.append(upstream_remote);
-    upstream.push_back('/');
-    upstream.append(upstream_branch);
-
-    git_reference* branch_ref = nullptr;
-    error = git_branch_lookup(&branch_ref, repo, upstream.c_str(), GIT_BRANCH_REMOTE);
-    if (error != 0) {
-      std::cout << "git_branch_lookup error code: "
-                << error << std::endl;
-      git_remote_free(remote);
+    Reference branch_ref;
+    if (const int error = git_branch_lookup(branch_ref.address(), repo, upstream_ref.c_str(), GIT_BRANCH_REMOTE); error != 0) {
+      std::cout << std::format("git_branch_lookup error code: {}\n", error);
       return;
     }
 
-    git_annotated_commit* commit = nullptr;
-    error = git_annotated_commit_from_ref(&commit, repo, branch_ref);
-    if (error != 0) {
-      std::cout << "git_annotated_commit_from_ref error: "
-                << git_error_last()->message << std::endl;
-      git_reference_free(branch_ref);
-      git_remote_free(remote);
+    AnnotatedCommit commit;
+    if (const int error = git_annotated_commit_from_ref(commit.address(), repo, branch_ref.get()); error != 0) {
+      std::cout << std::format("git_annotated_commit_from_ref error: {}\n", get_git_error());
       return;
     }
 
-    const git_oid* commit_oid = git_annotated_commit_id(commit);
+    const git_oid* commit_oid = git_annotated_commit_id(commit.get());
 
-    git_object* commit_object = nullptr;
-    int error = git_object_lookup(&commit_object, repo, commit_oid, GIT_OBJECT_COMMIT);
-    if (error != 0) {
-      std::cout << "git_object_lookup error: "
-                << git_error_last()->message << std::endl;
-      git_reference_free(branch_ref);
-      git_remote_free(remote);
+    Object commit_object;
+    if (const int error = git_object_lookup(commit_object.address(), repo, commit_oid, GIT_OBJECT_COMMIT); error != 0) {
+      std::cout << std::format("git_object_lookup error: {}\n", get_git_error());
       return;
     }
 
     git_checkout_options checkout_opts = GIT_CHECKOUT_OPTIONS_INIT;
     checkout_opts.checkout_strategy = GIT_CHECKOUT_FORCE;
-    error = git_checkout_tree(repo, commit_object, &checkout_opts);
-    if (error != 0) {
-      std::cout << "git_checkout_tree error: "
-                << git_error_last()->message << std::endl;
-      git_reference_free(branch_ref);
-      git_remote_free(remote);
+    if (const int error = git_checkout_tree(repo, commit_object.get(), &checkout_opts); error != 0) {
+      std::cout << std::format("git_checkout_tree error: {}\n", get_git_error());
       return;
     }
 
-    git_reference* local_branch_ref = nullptr;
-    error = git_branch_lookup(&local_branch_ref, repo, branch_name, GIT_BRANCH_LOCAL);
-    if (error != 0) {
-      std::cout << "git_branch_lookup for local error: "
-                << git_error_last()->message << std::endl;
-      git_reference_free(branch_ref);
-      git_remote_free(remote);
+    Reference local_branch_ref;
+    if (const int error = git_branch_lookup(local_branch_ref.address(), repo, branch_name, GIT_BRANCH_LOCAL); error != 0) {
+      std::cout << std::format("git_branch_lookup for local error: {}\n", get_git_error());
       return;
     }
 
-    git_reference *new_target_ref;
-    error = git_reference_set_target(&new_target_ref, local_branch_ref, commit_oid, nullptr);
-    if (error != 0) {
-      std::cout << "git_reference_set_target for local error: "
-                << git_error_last()->message << std::endl;
-      git_reference_free(local_branch_ref);
-      git_reference_free(branch_ref);
-      git_remote_free(remote);
+    Reference new_target_ref;
+    if (const int error = git_reference_set_target(new_target_ref.address(), local_branch_ref.get(), commit_oid, nullptr); error != 0) {
+      std::cout << std::format("git_reference_set_target for local error: {}\n", get_git_error());
       return;
     }
 
-    git_reference_free(new_target_ref);
-
-    error = git_branch_set_upstream(local_branch_ref, upstream.c_str());
-    if (error != 0) {
-      std::cout << "git_branch_set_upstream error: "
-                << git_error_last()->message << std::endl;
-      git_reference_free(local_branch_ref);
-      git_reference_free(branch_ref);
-      git_remote_free(remote);
+    if (const int error = git_branch_set_upstream(local_branch_ref.get(), upstream_ref.c_str()); error != 0) {
+      std::cout << std::format("git_branch_set_upstream error: {}\n", get_git_error());
       return;
     }
-
-    git_annotated_commit_free(commit);
-    git_reference_free(local_branch_ref);
-    git_reference_free(branch_ref);
   } else {
-    const auto pull_cmd = "git pull " + repo_upstream;
+    const auto pull_cmd = std::format("git pull {}", upstream());
     const auto output = exec(pull_cmd.c_str());
     if (opts->is_verbose()) {
-      std::cout << output << std::endl;
+      std::cout << output << '\n';
     }
   }
 
   set_hash(remote_hash);
-
-  git_reference_free(head_ref);
-  git_remote_free(remote);
 }
 
 template <> void
@@ -359,94 +381,88 @@ Repo <VCS::Git> :: rebase (
   const auto& repo_path   = target();
 
   git_repository* repo = nullptr;
+  GitRepoGuard grg(repo);
 
-  int error = git_repository_open(&repo, repo_path.data());
-  if (error < 0) {
-    std::cout << "libgit2 repository open error: " << git_error_last()->message << std::endl;
-    git_libgit2_shutdown();
+  if (const int error = git_repository_open(&repo, repo_path.data()); error < 0) {
+    std::cout << std::format("libgit2 repository open error: {}\n", get_git_error());
     return;
   }
 
-  git_reference* head_ref = nullptr;
-  error = git_repository_head(&head_ref, repo);
-  if (error < 0) {
-    std::cout << "libgit2 repository head error: " << git_error_last()->message << std::endl;
-    git_repository_free(repo);
-    git_libgit2_shutdown();
+  grg = GitRepoGuard(repo);
+
+  Reference head_ref;
+  if (const int error = git_repository_head(head_ref.address(), repo); error < 0) {
+    std::cout << std::format("libgit2 repository head error: {}\n", get_git_error());
     return;
   }
 
   const char* branch_name = nullptr;
-  error = git_branch_name(&branch_name, head_ref);
-  if (error < 0) {
-    std::cout << "libgit2 branch name error: " << git_error_last()->message << std::endl;
-    git_repository_free(repo);
-    git_libgit2_shutdown();
+  if (const int error = git_branch_name(&branch_name, head_ref.get()); error < 0) {
+    std::cout << std::format("libgit2 branch name error: {}\n", get_git_error());
     return;
   }
 
   if (branch_name != repo_branch) {
-    error = git_reference_dwim(&head_ref, repo, repo_branch.c_str());
-    if (error < 0) {
-      std::cout << "git_reference_dwim error: " << git_error_last()->message << std::endl;
-      git_repository_free(repo);
-      git_libgit2_shutdown();
+    Reference new_head_ref;
+    if (const int error = git_reference_dwim(new_head_ref.address(), repo, repo_branch.c_str()); error < 0) {
+      std::cout << std::format("git_reference_dwim error: {}\n", get_git_error());
       return;
     }
+    head_ref = std::move(new_head_ref);
+    
     git_checkout_options gcopts = GIT_CHECKOUT_OPTIONS_INIT;
-    error = git_checkout_tree(repo, (const git_object*)git_reference_target(head_ref), &gcopts);
-    if (error < 0) {
-      std::cout << "git_checkout_tree error: " << git_error_last()->message << std::endl;
-      git_repository_free(repo);
-      git_libgit2_shutdown();
+    if (const int error = git_checkout_tree(repo, reinterpret_cast<const git_object*>(git_reference_target(head_ref.get())), &gcopts); error < 0) {
+      std::cout << std::format("git_checkout_tree error: {}\n", get_git_error());
       return;
     }
     if (opts->is_verbose()) {
-      std::cout << "checkout to " << repo_branch << " complete" << std::endl;
+      std::cout << std::format("checkout to {} complete\n", repo_branch);
     }
   }
 
   auto local_hash = repo_hash();
   if (local_hash.empty()) {
-    git_oid commit_oid;
-    const git_oid *commit_head_oid = git_reference_target(head_ref);
-    git_oid_cpy(&commit_oid, commit_head_oid);
-
-    char commit_hash[GIT_OID_HEXSZ + 1];
-    git_oid_fmt(commit_hash, &commit_oid);
-
-    local_hash = commit_hash;
-    set_hash( local_hash );
+    if (auto commit_hash = get_commit_hash(head_ref.get())) {
+      local_hash = *commit_hash;
+      set_hash(local_hash);
+    } else {
+      std::cout << "Failed to get commit hash\n";
+      return;
+    }
   }
 
   const auto& repo_upstream = upstream();
-  const auto remote_hash = get_remote_hash( repo_upstream );
+  const auto remote_hash_result = get_remote_hash(repo_upstream);
+  
+  if (!remote_hash_result) {
+    std::cout << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
+    return;
+  }
 
+  const auto& remote_hash = *remote_hash_result;
   if (local_hash == remote_hash) {
-    std::cout << "repository " << this << " is up to date" << std::endl;
+    std::cout << "repository " << this << " is up to date\n";
     return;
   }
 
   if (opts->do_clean()) {
-    clean(repo);
+    if (auto clean_result = clean(repo); !clean_result) {
+      std::cout << std::format("Clean failed: {}\n", clean_result.error());
+      return;
+    }
   }
 
-  const auto pull_cmd = "git pull --rebase " + repo_upstream;
+  const auto pull_cmd = std::format("git pull --rebase {}", repo_upstream);
   const auto pull_output = exec(pull_cmd.c_str());
   if (opts->is_verbose()) {
-    std::cout << pull_output << std::endl;
+    std::cout << pull_output << '\n';
   }
 
-  const auto push_cmd = "git push --force origin " + repo_branch;
+  const auto push_cmd = std::format("git push --force origin {}", repo_branch);
   const auto push_output = exec(push_cmd.c_str());
   if (opts->is_verbose()) {
-    std::cout << push_output << std::endl;
+    std::cout << push_output << '\n';
   }
 
-  set_hash( remote_hash );
-
-  git_reference_free(head_ref);
-  git_repository_free(repo);
-
-  git_libgit2_shutdown();
+  set_hash(remote_hash);
 }

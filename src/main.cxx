@@ -13,10 +13,7 @@
 #include "commands/add.hpp"
 #include "commands/rm.hpp"
 
-// You can't cout just dfine variable, you need to do #x thing
 #define STRINGIFY(x) #x
-// You can't just use #x thing you need to convert it into macro
-// The extra level of indirection causes the value of the macro to be stringified instead of the name of the macro.
 #define STRINGIFY_M(x) STRINGIFY(x)
 
 void
@@ -45,7 +42,7 @@ main(int argc, char *argv[]) {
       ["-v"]["--verbose"]
       ("Display verbose output")
     | lyra::opt(
-      [&](bool){ 
+      [&](bool){
         version = true;
       })
       ["--version"]
@@ -72,50 +69,41 @@ main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
-  const auto& HomeDirectory = utils::get_home_dir() + std::string("/");
+  const std::string config_file = utils::get_config_path(std::string{CONFIG_FILE});
+  const std::string options_file = utils::get_config_path(std::string{OPTIONS_FILE});
 
-  const auto options_file = HomeDirectory + OPTIONS_FILE;
-  const auto config_file  = HomeDirectory + CONFIG_FILE;
-
-  std::shared_ptr<GlobalOptions> otpions = std::make_shared<GlobalOptions>();
+  auto options = std::make_shared<GlobalOptions>();
 
   if (std::filesystem::exists(options_file)) {
-    otpions->parse_options(options_file);
+    options->parse_options(options_file);
   }
 
   if (verbose) {
-    otpions->set_verbose(true);
+    options->set_verbose(true);
   }
 
-  if (std::filesystem::exists(config_file)) {
-    auto config = YAML::LoadFile(config_file);
-    const auto& repositories = parse_config(config);
+  if (!std::filesystem::exists(config_file)) {
+    std::cout << "missing config: " << config_file << std::endl;
+    return EXIT_SUCCESS;
+  }
 
-    bool some_hash_was_updated = false;
-    for (auto& repo : repositories) {
-      std::cout << "processing: " << repo << std::endl;
-      repo->process(otpions);
-      if (repo->is_hash_updated()) {
-        for (auto it = config.begin(); it != config.end(); ++it) {
-          if ((*it)["target"]
-           && (*it)["target"].as<std::string>() == repo->target()) {
-            (*it)["hash"] = repo->repo_hash();
-            if (!some_hash_was_updated) {
-              some_hash_was_updated = true;
-            }
-          }
-        }
-      }
+  auto config = YAML::LoadFile(config_file);
+  const auto repositories = parse_config(config);
+
+  bool some_hash_was_updated = false;
+  for (size_t i = 0; i < repositories.size(); ++i) {
+    const auto& repo = repositories[i];
+    std::cout << "processing: " << *repo << std::endl;
+    repo->process(options);
+    if (repo->is_hash_updated()) {
+      // Update the hash in the corresponding YAML node by index
+      config[i]["hash"] = repo->repo_hash();
+      some_hash_was_updated = true;
     }
+  }
 
-    if (some_hash_was_updated) {
-      save_config(config, config_file);
-    }
-
-  } else {
-    std::cout << "missing config: "
-              << config_file
-              << std::endl;
+  if (some_hash_was_updated) {
+    save_config(config, config_file);
   }
 
   return EXIT_SUCCESS;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "utils.hpp"
+
 struct rm_command {
   bool show_help = false;
   std::string directory;
@@ -24,28 +26,30 @@ struct rm_command {
     }
     if (show_help) {
       std::cout << g;
-    } else {
-      const auto& HomeDirectory = utils::get_home_dir();
-      const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
-      if (std::filesystem::exists(config_file)) {
-        auto config = YAML::LoadFile(config_file);
-        unsigned int node_index = 0;
-        for(YAML::Node node : config) {
-          const auto& target_str = node["target"].as<std::string>();
-          if (target_str == directory) {
-            if (config.remove(node_index)) {
-              save_config(config, config_file);
-              exit(0);
-            } else {
-              std::cout << "failed to remove repository " << directory << std::endl;
-              exit(1);
-            }
-          }
-          node_index++;
-        }
-        std::cout << "repository " << directory << " not found" << std::endl;
-      }
+      std::exit(EXIT_SUCCESS);
     }
-    exit(EXIT_SUCCESS);
+
+    const std::string config_file = utils::get_config_path(std::string{CONFIG_FILE});
+    if (!std::filesystem::exists(config_file)) {
+      std::exit(EXIT_SUCCESS);
+    }
+
+    auto config = YAML::LoadFile(config_file);
+    unsigned int node_index = 0;
+    for (const auto& node : config) {
+      const auto& target_str = node["target"].as<std::string>();
+      if (target_str == directory) {
+        if (config.remove(node_index)) {
+          save_config(config, config_file);
+          std::exit(EXIT_SUCCESS);
+        } else {
+          std::cout << "failed to remove repository " << directory << std::endl;
+          std::exit(EXIT_FAILURE);
+        }
+      }
+      node_index++;
+    }
+    std::cout << "repository " << directory << " not found" << std::endl;
+    std::exit(EXIT_SUCCESS);
   }
 };

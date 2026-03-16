@@ -6,8 +6,8 @@ template <> void
 Repo <VCS::Pijul> :: pull (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
-  const auto pull_cmd = "pijul pull";
-  const auto output = exec(pull_cmd);
+  const auto pull_cmd = std::format("cd '{}' && pijul pull", target());
+  const auto output = exec(pull_cmd.c_str());
   if (opts->is_verbose()) {
     std::cout << output << std::endl;
   }

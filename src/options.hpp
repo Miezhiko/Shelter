@@ -12,7 +12,7 @@ class [[nodiscard]] GlobalOptions final {
   GlobalOptions()
     : clean(true)
     , force(false)
-    , verbose(true) {};
+    , verbose(false) {};
 
   GlobalOptions( bool c
                , bool v)

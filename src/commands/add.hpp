@@ -1,12 +1,13 @@
 #pragma once
 
+#include "utils.hpp"
 #include "vcs/gitshell.hpp"
 
 struct add_command {
   bool show_help        = false;
-  std::string branch    {}; // look for default branch
-  std::string upstream  {}; // "origin master"
-  std::string directory {}; // current directory?
+  std::string branch    {};
+  std::string upstream  {};
+  std::string directory {};
   std::string action    = "pull";
   std::string vcs       = "git";
 
@@ -62,8 +63,7 @@ struct add_command {
     if (show_help) {
       std::cout << g;
     } else {
-      const auto& HomeDirectory = utils::get_home_dir();
-      const std::string config_file = HomeDirectory + std::string("/") + CONFIG_FILE;
+      const std::string config_file = utils::get_config_path(std::string{CONFIG_FILE});
       if (std::filesystem::exists(config_file)) {
         auto config = YAML::LoadFile(config_file);
         YAML::Node new_node;
@@ -77,6 +77,6 @@ struct add_command {
         save_config(config, config_file);
       }
     }
-    exit(EXIT_SUCCESS);
+    std::exit(EXIT_SUCCESS);
   }
 };

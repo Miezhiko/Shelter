@@ -11,22 +11,19 @@
 #include <functional>
 
 namespace {
+  template <VCS T>
+  std::shared_ptr<Repository>
+  makeRepo(RepoArgs args, std::string hash_str) {
+    return std::make_shared<Repo<T>>(std::move(args), std::move(hash_str));
+  }
 
-template <VCS T>
-std::shared_ptr<Repository>
-makeRepo(RepoArgs args, std::string hash_str) {
-  return std::make_shared<Repo<T>>(std::move(args), std::move(hash_str));
+  using RepoFactory = std::function<std::shared_ptr<Repository>(RepoArgs, std::string)>;
+  const std::unordered_map<std::string_view, RepoFactory> VCSTYPE = {
+    { "git",        [](RepoArgs a, std::string h) { return makeRepo<VCS::Git>(std::move(a), std::move(h)); } },
+    { "pijul",      [](RepoArgs a, std::string h) { return makeRepo<VCS::Pijul>(std::move(a), std::move(h)); } },
+    { "git shell",  [](RepoArgs a, std::string h) { return makeRepo<VCS::GitShell>(std::move(a), std::move(h)); } }
+  };
 }
-
-using RepoFactory = std::function<std::shared_ptr<Repository>(RepoArgs, std::string)>;
-
-const std::unordered_map<std::string_view, RepoFactory> VCSTYPE = {
-  { "git",        [](RepoArgs a, std::string h) { return makeRepo<VCS::GitShell>(std::move(a), std::move(h)); } },
-  { "pijul",      [](RepoArgs a, std::string h) { return makeRepo<VCS::Pijul>(std::move(a), std::move(h)); } },
-  { "git shell",  [](RepoArgs a, std::string h) { return makeRepo<VCS::GitShell>(std::move(a), std::move(h)); } },
-};
-
-} // namespace
 
 [[nodiscard]] std::vector<std::shared_ptr<Repository>>
 parse_config(const YAML::Node& config) {

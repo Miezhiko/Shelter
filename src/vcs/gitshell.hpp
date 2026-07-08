@@ -14,8 +14,8 @@ namespace {
   }
 
   [[nodiscard]] ShellResult
-  shell_get_remote_hash(std::string_view upstream) noexcept {
-    const auto ls_remote_result = safe_exec(std::format("git ls-remote {}", upstream));
+  shell_get_remote_hash(std::string_view repo_path, std::string_view upstream) noexcept {
+    const auto ls_remote_result = safe_exec(std::format("cd '{}' && git ls-remote {}", repo_path, upstream));
     if (!ls_remote_result) {
       return ls_remote_result;
     }
@@ -134,7 +134,7 @@ Repo <VCS::GitShell> :: pull (
     set_hash(local_hash);
   }
 
-  const auto remote_hash_result = shell_get_remote_hash(upstream());
+  const auto remote_hash_result = shell_get_remote_hash(repo_path, upstream());
   if (!remote_hash_result) {
     std::cout << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
     return;
@@ -184,6 +184,23 @@ Repo <VCS::GitShell> :: rebase (
     }
   }
 
+  const auto& push_remote = remote().empty() ? "origin" : remote();
+
+  const auto fetch_result = safe_exec(std::format("cd '{}' && git fetch {} {}", repo_path, push_remote, repo_branch));
+  if (!fetch_result) {
+    std::cout << std::format("Fetch from {} failed: {}\n", push_remote, fetch_result.error());
+    return;
+  }
+
+  const auto reset_result = safe_exec(std::format("cd '{}' && git reset --hard {}/{}", repo_path, push_remote, repo_branch));
+  if (!reset_result) {
+    std::cout << std::format("Reset to {}/{} failed: {}\n", push_remote, repo_branch, reset_result.error());
+    return;
+  }
+  if (opts->is_verbose()) {
+    std::cout << *reset_result << '\n';
+  }
+
   auto local_hash = repo_hash();
   if (local_hash.empty()) {
     const auto hash_result = shell_get_local_hash(repo_path);
@@ -195,7 +212,7 @@ Repo <VCS::GitShell> :: rebase (
     set_hash(local_hash);
   }
 
-  const auto remote_hash_result = shell_get_remote_hash(upstream());
+  const auto remote_hash_result = shell_get_remote_hash(repo_path, upstream());
   if (!remote_hash_result) {
     std::cout << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
     return;
@@ -214,8 +231,6 @@ Repo <VCS::GitShell> :: rebase (
       return;
     }
   }
-
-  const auto& push_remote = remote().empty() ? "origin" : remote();
 
   const auto pull_result = pull_rebase_upstream(repo_path, upstream(), opts->is_verbose());
   if (!pull_result) {

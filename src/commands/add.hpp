@@ -7,6 +7,7 @@ struct add_command {
   bool show_help        = false;
   std::string branch    {};
   std::string upstream  {};
+  std::string remote    {};
   std::string directory {};
   std::string action    = "pull";
   std::string vcs       = "git";
@@ -36,6 +37,11 @@ struct add_command {
             .name("-u").name("--upstream")
             .optional()
             .help("Target upstream"))
+        .add_argument(
+          lyra::opt(remote, "remote")
+            .name("-r").name("--remote")
+            .optional()
+            .help("Target remote"))
         .add_argument(
           lyra::opt(vcs, "vcs")
             .name("--vcs")
@@ -73,6 +79,9 @@ struct add_command {
         new_node["branch"]    = branch;
         new_node["vcs"]       = vcs;
         new_node["hash"]      = "";
+        if (!remote.empty()) {
+          new_node["remote"]  = remote;
+        }
         config.push_back(new_node);
         save_config(config, config_file);
       }

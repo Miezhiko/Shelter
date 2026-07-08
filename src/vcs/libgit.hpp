@@ -470,13 +470,15 @@ Repo <VCS::Git> :: rebase (
     }
   }
 
+  const auto& push_remote = remote().empty() ? "origin" : remote();
+
   const auto pull_cmd = std::format("cd '{}' && git pull --rebase {}", target(), repo_upstream);
   const auto pull_output = exec(pull_cmd.c_str());
   if (opts->is_verbose()) {
     std::cout << pull_output << '\n';
   }
 
-  const auto push_cmd = std::format("cd '{}' && git push --force origin {}", target(), repo_branch);
+  const auto push_cmd = std::format("cd '{}' && git push --force {} {}", target(), push_remote, repo_branch);
   const auto push_output = exec(push_cmd.c_str());
   if (opts->is_verbose()) {
     std::cout << push_output << '\n';

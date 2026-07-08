@@ -52,13 +52,15 @@ class [[nodiscard]] RepoArgs {
   std::string target_;
   std::string upstream_;
   std::string branch_;
+  std::string remote_;
   Action action_;
 
   public:
-  RepoArgs(std::string target, std::string action_str, std::string upstream, std::string branch)
+  RepoArgs(std::string target, std::string action_str, std::string upstream, std::string branch, std::string remote = {})
     : target_(std::move(target))
     , upstream_(std::move(upstream))
-    , branch_(std::move(branch)) {
+    , branch_(std::move(branch))
+    , remote_(std::move(remote)) {
 
     auto it = std::ranges::find_if(STRACTION_ARRAY,
       [&action_str](const auto& pair) { return pair.first == action_str; });
@@ -72,6 +74,7 @@ class [[nodiscard]] RepoArgs {
   [[nodiscard]] const std::string& target()   const noexcept { return target_; }
   [[nodiscard]] const std::string& upstream() const noexcept { return upstream_; }
   [[nodiscard]] const std::string& branch()   const noexcept { return branch_; }
+  [[nodiscard]] const std::string& remote()   const noexcept { return remote_; }
   [[nodiscard]] Action             action()   const noexcept { return action_; }
 };
 
@@ -133,6 +136,7 @@ class [[nodiscard]] Repository {
   [[nodiscard]] const std::string& target()   const noexcept { return args_.target();   }
   [[nodiscard]] const std::string& upstream() const noexcept { return args_.upstream(); }
   [[nodiscard]] const std::string& branch()   const noexcept { return args_.branch();   }
+  [[nodiscard]] const std::string& remote()   const noexcept { return args_.remote();   }
   [[nodiscard]] const std::string& repo_hash() const noexcept { return hash_;            }
   [[nodiscard]] bool is_hash_updated() const noexcept { return hash_updated_;            }
 

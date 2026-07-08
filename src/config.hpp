@@ -40,11 +40,17 @@ parse_config(const YAML::Node& config) {
       continue;
     }
 
+    std::string remote;
+    if (const auto& remoteNode = node["remote"]) {
+      remote = remoteNode.as<std::string>();
+    }
+
     const RepoArgs args(
       targetNode.as<std::string>(),
       taskNode.as<std::string>(),
       upstreamNode.as<std::string>(),
-      branchNode.as<std::string>()
+      branchNode.as<std::string>(),
+      std::move(remote)
     );
 
     std::string hash_str;

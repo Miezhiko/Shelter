@@ -74,8 +74,8 @@ namespace {
   }
 
   [[nodiscard]] ShellResult
-  force_push_branch(std::string_view repo_path, std::string_view branch, bool verbose = false) noexcept {
-    const auto push_result = safe_exec(std::format("cd '{}' && git push --force origin {}", repo_path, branch), false);
+  force_push_branch(std::string_view repo_path, std::string_view remote, std::string_view branch, bool verbose = false) noexcept {
+    const auto push_result = safe_exec(std::format("cd '{}' && git push --force {} {}", repo_path, remote, branch), false);
     if (verbose && push_result) {
       std::cout << *push_result << '\n';
     }
@@ -215,13 +215,15 @@ Repo <VCS::GitShell> :: rebase (
     }
   }
 
+  const auto& push_remote = remote().empty() ? "origin" : remote();
+
   const auto pull_result = pull_rebase_upstream(repo_path, upstream(), opts->is_verbose());
   if (!pull_result) {
     std::cout << std::format("Rebase pull failed: {}\n", pull_result.error());
     return;
   }
 
-  const auto push_result = force_push_branch(repo_path, repo_branch, opts->is_verbose());
+  const auto push_result = force_push_branch(repo_path, push_remote, repo_branch, opts->is_verbose());
   if (!push_result) {
     std::cout << std::format("Force push failed: {}\n", push_result.error());
     return;

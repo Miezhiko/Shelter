@@ -15,8 +15,10 @@ class [[nodiscard]] GlobalOptions final {
     , verbose(false) {};
 
   GlobalOptions( bool c
+               , bool f
                , bool v)
     : clean(c)
+    , force(f)
     , verbose(v) {};
 
   [[nodiscard]] bool

@@ -13,6 +13,10 @@
 #include "commands/add.hpp"
 #include "commands/rm.hpp"
 
+#include <thread>
+#include <semaphore>
+#include <algorithm>
+
 #define STRINGIFY(x) #x
 #define STRINGIFY_M(x) STRINGIFY(x)
 
@@ -90,14 +94,35 @@ main(int argc, char *argv[]) {
   auto config = YAML::LoadFile(config_file);
   const auto repositories = parse_config(config);
 
+  #ifndef _WIN32
+  // Initialize libgit2 once for the whole run rather than per repository;
+  // git_libgit2_init/shutdown are ref-counted and thread-safe, but doing
+  // this once avoids needless lock contention when repos run in parallel.
+  const GitLibGuard lib_guard;
+  #endif
+
+  const auto worker_count = std::max<size_t>(1,
+    std::min<size_t>(repositories.size(), std::thread::hardware_concurrency()));
+  std::counting_semaphore<> slots(static_cast<std::ptrdiff_t>(worker_count));
+
+  std::vector<std::jthread> workers;
+  workers.reserve(repositories.size());
+
+  for (const auto& parsed : repositories) {
+    slots.acquire();
+    const ParsedRepo* item = &parsed; // stable pointer into `repositories`, safe to capture by value
+    workers.emplace_back([&slots, item, &options] {
+      sync_cout() << "processing: " << *item->repo << std::endl;
+      item->repo->process(options);
+      slots.release();
+    });
+  }
+  workers.clear(); // joins all jthreads
+
   bool some_hash_was_updated = false;
-  for (size_t i = 0; i < repositories.size(); ++i) {
-    const auto& repo = repositories[i];
-    std::cout << "processing: " << *repo << std::endl;
-    repo->process(options);
-    if (repo->is_hash_updated()) {
-      // Update the hash in the corresponding YAML node by index
-      config[i]["hash"] = repo->repo_hash();
+  for (const auto& parsed : repositories) {
+    if (parsed.repo->is_hash_updated()) {
+      config[parsed.config_index]["hash"] = parsed.repo->repo_hash();
       some_hash_was_updated = true;
     }
   }

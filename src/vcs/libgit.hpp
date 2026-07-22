@@ -119,7 +119,7 @@ namespace {
                            GIT_STATUS_IGNORED))) {
         const char* path = entry->head_to_index->new_file.path;
         if (const int error = git_index_remove_bypath(repo_index.get(), path); error != 0) {
-          std::cout << std::format("Failed to remove file '{}': {}\n", path, get_git_error());
+          sync_cout() << std::format("Failed to remove file '{}': {}\n", path, get_git_error());
         }
       }
     }
@@ -133,9 +133,12 @@ namespace {
 
   [[nodiscard]] GitStringResult
   get_remote_hash_shell(std::string_view repo_path, std::string_view upstream) noexcept {
-    const std::string ls_remote_cmd = std::format("cd '{}' && git ls-remote {}", repo_path, upstream);
-    const std::string ls_remote = exec(ls_remote_cmd.c_str());
+    const auto ls_remote_result = safe_exec(std::format("cd '{}' && git ls-remote {}", repo_path, upstream));
+    if (!ls_remote_result) {
+      return std::unexpected(ls_remote_result.error());
+    }
 
+    const auto& ls_remote = *ls_remote_result;
     if (const auto tpos = ls_remote.find('\t'); tpos != std::string::npos) {
       return ls_remote.substr(0, tpos);
     }
@@ -227,50 +230,49 @@ template <> void
 Repo <VCS::Git> :: pull (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
-  const GitLibGuard lib_guard;
   const auto& repo_path = target();
 
   git_repository* raw_repo = nullptr;
   if (const int error = git_repository_open(&raw_repo, repo_path.c_str()); error < 0) {
-    std::cout << std::format("libgit2 repository open error: {}\n", get_git_error());
+    sync_cout() << std::format("libgit2 repository open error: {}\n", get_git_error());
     return;
   }
   GitRepoGuard repo(raw_repo);
 
   Reference head_ref;
   if (const int error = git_repository_head(head_ref.address(), raw_repo); error < 0) {
-    std::cout << std::format("libgit2 repository head error: {}\n", get_git_error());
+    sync_cout() << std::format("libgit2 repository head error: {}\n", get_git_error());
     return;
   }
 
   const char* branch_name = nullptr;
   if (const int error = git_branch_name(&branch_name, head_ref.get()); error < 0) {
-    std::cout << std::format("libgit2 branch name error: {}\n", get_git_error());
+    sync_cout() << std::format("libgit2 branch name error: {}\n", get_git_error());
     return;
   }
 
   const auto& repo_branch = branch();
   if (std::string_view{branch_name} != repo_branch) {
     if (!opts->do_force()) {
-      std::cout << std::format( "Not on {}, but on {}, skipping update!\n"
+      sync_cout() << std::format( "Not on {}, but on {}, skipping update!\n"
                               , repo_branch, std::string{branch_name} );
       return;
     }
 
     Reference new_head_ref;
     if (const int error = git_reference_dwim(new_head_ref.address(), raw_repo, repo_branch.c_str()); error < 0) {
-      std::cout << std::format("git_reference_dwim error: {}\n", get_git_error());
+      sync_cout() << std::format("git_reference_dwim error: {}\n", get_git_error());
       return;
     }
     head_ref = std::move(new_head_ref);
 
     if (const auto result = do_checkout(raw_repo, head_ref.get()); !result) {
-      std::cout << std::format("can't checkout to {}: {}\n", repo_branch, result.error());
+      sync_cout() << std::format("can't checkout to {}: {}\n", repo_branch, result.error());
       return;
     }
 
     if (opts->is_verbose()) {
-      std::cout << std::format("checkout to {} complete\n", repo_branch);
+      sync_cout() << std::format("checkout to {} complete\n", repo_branch);
     }
 
     // Update branch name after successful checkout
@@ -283,21 +285,21 @@ Repo <VCS::Git> :: pull (
       local_hash = *commit_hash;
       set_hash(local_hash);
     } else {
-      std::cout << "Failed to get commit hash\n";
+      sync_cout() << "Failed to get commit hash\n";
       return;
     }
   }
 
   const auto upstream_split = split_upstream(upstream());
   if (upstream_split.empty()) {
-    std::cout << "Invalid upstream configuration\n";
+    sync_cout() << "Invalid upstream configuration\n";
     return;
   }
 
   const auto& upstream_remote = upstream_split[0];
   Remote remote;
   if (const int error = git_remote_lookup(remote.address(), raw_repo, upstream_remote.c_str()); error < 0) {
-    std::cout << std::format("git_remote_lookup error: {}\n", get_git_error());
+    sync_cout() << std::format("git_remote_lookup error: {}\n", get_git_error());
     return;
   }
 
@@ -314,26 +316,26 @@ Repo <VCS::Git> :: pull (
   }
 
   if (!remote_hash_result) {
-    std::cout << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
+    sync_cout() << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
     return;
   }
 
   const auto& remote_hash = *remote_hash_result;
   if (local_hash == remote_hash) {
-    std::cout << "repository " << *this << " is up to date\n";
+    sync_cout() << "repository " << *this << " is up to date\n";
     return;
   }
 
   if (opts->do_clean()) {
     if (auto clean_result = clean(raw_repo); !clean_result) {
-      std::cout << std::format("Clean failed: {}\n", clean_result.error());
+      sync_cout() << std::format("Clean failed: {}\n", clean_result.error());
       return;
     }
   }
 
   if (connected) {
     if (auto fetch_result = do_fetch(raw_repo, remote.get()); !fetch_result) {
-      std::cout << std::format("Fetch failed: {}\n", fetch_result.error());
+      sync_cout() << std::format("Fetch failed: {}\n", fetch_result.error());
       return;
     }
 
@@ -342,13 +344,13 @@ Repo <VCS::Git> :: pull (
 
     Reference branch_ref;
     if (const int error = git_branch_lookup(branch_ref.address(), raw_repo, upstream_ref.c_str(), GIT_BRANCH_REMOTE); error != 0) {
-      std::cout << std::format("git_branch_lookup error code: {}\n", error);
+      sync_cout() << std::format("git_branch_lookup error code: {}\n", error);
       return;
     }
 
     AnnotatedCommit commit;
     if (const int error = git_annotated_commit_from_ref(commit.address(), raw_repo, branch_ref.get()); error != 0) {
-      std::cout << std::format("git_annotated_commit_from_ref error: {}\n", get_git_error());
+      sync_cout() << std::format("git_annotated_commit_from_ref error: {}\n", get_git_error());
       return;
     }
 
@@ -356,36 +358,39 @@ Repo <VCS::Git> :: pull (
 
     Object commit_object;
     if (const int error = git_object_lookup(commit_object.address(), raw_repo, commit_oid, GIT_OBJ_COMMIT); error != 0) {
-      std::cout << std::format("git_object_lookup error: {}\n", get_git_error());
+      sync_cout() << std::format("git_object_lookup error: {}\n", get_git_error());
       return;
     }
 
     if (const auto result = do_checkout(raw_repo, branch_ref.get()); !result) {
-      std::cout << std::format("Checkout failed: {}\n", result.error());
+      sync_cout() << std::format("Checkout failed: {}\n", result.error());
       return;
     }
 
     Reference local_branch_ref;
     if (const int error = git_branch_lookup(local_branch_ref.address(), raw_repo, branch_name, GIT_BRANCH_LOCAL); error != 0) {
-      std::cout << std::format("git_branch_lookup for local error: {}\n", get_git_error());
+      sync_cout() << std::format("git_branch_lookup for local error: {}\n", get_git_error());
       return;
     }
 
     Reference new_target_ref;
     if (const int error = git_reference_set_target(new_target_ref.address(), local_branch_ref.get(), commit_oid, nullptr); error != 0) {
-      std::cout << std::format("git_reference_set_target for local error: {}\n", get_git_error());
+      sync_cout() << std::format("git_reference_set_target for local error: {}\n", get_git_error());
       return;
     }
 
     if (const int error = git_branch_set_upstream(local_branch_ref.get(), upstream_ref.c_str()); error != 0) {
-      std::cout << std::format("git_branch_set_upstream error: {}\n", get_git_error());
+      sync_cout() << std::format("git_branch_set_upstream error: {}\n", get_git_error());
       return;
     }
   } else {
-    const auto pull_cmd = std::format("cd '{}' && git pull {}", target(), upstream());
-    const auto output = exec(pull_cmd.c_str());
+    const auto pull_result = safe_exec(std::format("cd '{}' && git pull {}", target(), upstream()), false);
+    if (!pull_result) {
+      sync_cout() << std::format("Pull failed: {}\n", pull_result.error());
+      return;
+    }
     if (opts->is_verbose()) {
-      std::cout << output << '\n';
+      sync_cout() << *pull_result << '\n';
     }
   }
 
@@ -396,25 +401,24 @@ template <> void
 Repo <VCS::Git> :: rebase (
   const std::shared_ptr<GlobalOptions>& opts
 ) {
-  const GitLibGuard lib_guard;
   const auto& repo_path = target();
 
   git_repository* raw_repo = nullptr;
   if (const int error = git_repository_open(&raw_repo, repo_path.c_str()); error < 0) {
-    std::cout << std::format("libgit2 repository open error: {}\n", get_git_error());
+    sync_cout() << std::format("libgit2 repository open error: {}\n", get_git_error());
     return;
   }
   GitRepoGuard repo(raw_repo);
 
   Reference head_ref;
   if (const int error = git_repository_head(head_ref.address(), raw_repo); error < 0) {
-    std::cout << std::format("libgit2 repository head error: {}\n", get_git_error());
+    sync_cout() << std::format("libgit2 repository head error: {}\n", get_git_error());
     return;
   }
 
   const char* branch_name = nullptr;
   if (const int error = git_branch_name(&branch_name, head_ref.get()); error < 0) {
-    std::cout << std::format("libgit2 branch name error: {}\n", get_git_error());
+    sync_cout() << std::format("libgit2 branch name error: {}\n", get_git_error());
     return;
   }
 
@@ -422,17 +426,17 @@ Repo <VCS::Git> :: rebase (
   if (std::string_view{branch_name} != repo_branch) {
     Reference new_head_ref;
     if (const int error = git_reference_dwim(new_head_ref.address(), raw_repo, repo_branch.c_str()); error < 0) {
-      std::cout << std::format("git_reference_dwim error: {}\n", get_git_error());
+      sync_cout() << std::format("git_reference_dwim error: {}\n", get_git_error());
       return;
     }
     head_ref = std::move(new_head_ref);
 
     if (const auto result = do_checkout(raw_repo, head_ref.get()); !result) {
-      std::cout << std::format("checkout to {} failed: {}\n", repo_branch, result.error());
+      sync_cout() << std::format("checkout to {} failed: {}\n", repo_branch, result.error());
       return;
     }
     if (opts->is_verbose()) {
-      std::cout << std::format("checkout to {} complete\n", repo_branch);
+      sync_cout() << std::format("checkout to {} complete\n", repo_branch);
     }
 
     branch_name = repo_branch.data();
@@ -443,17 +447,17 @@ Repo <VCS::Git> :: rebase (
   {
     const auto fetch_result = safe_exec(std::format("cd '{}' && git fetch {} {}", target(), push_remote_name, repo_branch));
     if (!fetch_result) {
-      std::cout << std::format("Fetch from {} failed: {}\n", push_remote_name, fetch_result.error());
+      sync_cout() << std::format("Fetch from {} failed: {}\n", push_remote_name, fetch_result.error());
       return;
     }
 
     const auto reset_result = safe_exec(std::format("cd '{}' && git reset --hard {}/{}", target(), push_remote_name, repo_branch));
     if (!reset_result) {
-      std::cout << std::format("Reset to {}/{} failed: {}\n", push_remote_name, repo_branch, reset_result.error());
+      sync_cout() << std::format("Reset to {}/{} failed: {}\n", push_remote_name, repo_branch, reset_result.error());
       return;
     }
     if (opts->is_verbose()) {
-      std::cout << *reset_result << '\n';
+      sync_cout() << *reset_result << '\n';
     }
   }
 
@@ -463,7 +467,7 @@ Repo <VCS::Git> :: rebase (
       local_hash = *commit_hash;
       set_hash(local_hash);
     } else {
-      std::cout << "Failed to get commit hash\n";
+      sync_cout() << "Failed to get commit hash\n";
       return;
     }
   }
@@ -472,33 +476,39 @@ Repo <VCS::Git> :: rebase (
   const auto remote_hash_result = get_remote_hash_shell(repo_path, repo_upstream);
 
   if (!remote_hash_result) {
-    std::cout << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
+    sync_cout() << std::format("Failed to get remote hash: {}\n", remote_hash_result.error());
     return;
   }
 
   const auto& remote_hash = *remote_hash_result;
   if (local_hash == remote_hash) {
-    std::cout << "repository " << *this << " is up to date\n";
+    sync_cout() << "repository " << *this << " is up to date\n";
     return;
   }
 
   if (opts->do_clean()) {
     if (auto clean_result = clean(raw_repo); !clean_result) {
-      std::cout << std::format("Clean failed: {}\n", clean_result.error());
+      sync_cout() << std::format("Clean failed: {}\n", clean_result.error());
       return;
     }
   }
 
-  const auto pull_cmd = std::format("cd '{}' && git pull --rebase {}", target(), repo_upstream);
-  const auto pull_output = exec(pull_cmd.c_str());
+  const auto pull_result = safe_exec(std::format("cd '{}' && git pull --rebase {}", target(), repo_upstream), false);
+  if (!pull_result) {
+    sync_cout() << std::format("Rebase pull failed: {}\n", pull_result.error());
+    return;
+  }
   if (opts->is_verbose()) {
-    std::cout << pull_output << '\n';
+    sync_cout() << *pull_result << '\n';
   }
 
-  const auto push_cmd = std::format("cd '{}' && git push --force {} {}", target(), push_remote_name, repo_branch);
-  const auto push_output = exec(push_cmd.c_str());
+  const auto push_result = safe_exec(std::format("cd '{}' && git push --force {} {}", target(), push_remote_name, repo_branch), false);
+  if (!push_result) {
+    sync_cout() << std::format("Force push failed: {}\n", push_result.error());
+    return;
+  }
   if (opts->is_verbose()) {
-    std::cout << push_output << '\n';
+    sync_cout() << *push_result << '\n';
   }
 
   set_hash(remote_hash);

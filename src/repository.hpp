@@ -105,17 +105,17 @@ class [[nodiscard]] Repository {
           const auto output = safe_exec(cmd, false);
           if (output) {
             if (opts->is_verbose()) {
-              std::cout << *output << '\n';
+              sync_cout() << *output << '\n';
             }
           } else {
-            std::cout << std::format("Failed to execute migma command '{}': {}\n",
+            sync_cout() << std::format("Failed to execute migma command '{}': {}\n",
               cmd, output.error());
           }
           break;
         }
       }
     } catch (const std::filesystem::filesystem_error& e) {
-      std::cout << std::format("Migma filesystem error: {}\n", e.what());
+      sync_cout() << std::format("Migma filesystem error: {}\n", e.what());
     }
   }
 
@@ -142,7 +142,7 @@ class [[nodiscard]] Repository {
 
   void set_hash(std::string new_hash) {
     if (hash_ != new_hash) {
-      std::cout << std::format("new hash: {}\n", new_hash);
+      sync_cout() << std::format("new hash: {}\n", new_hash);
       hash_ = std::move(new_hash);
       hash_updated_ = true;
     }
@@ -150,7 +150,7 @@ class [[nodiscard]] Repository {
 
   void process(const std::shared_ptr<GlobalOptions>& opts) {
     if (!path_exists()) {
-      std::cout << std::format("Target path '{}' does not exist\n", args_.target());
+      sync_cout() << std::format("Target path '{}' does not exist\n", args_.target());
       return;
     }
 
@@ -158,7 +158,7 @@ class [[nodiscard]] Repository {
       [[likely]] case Action::Pull:   pull(opts);   break;
       case Action::Rebase:             rebase(opts); break;
       [[unlikely]] case Action::Unknown:
-        std::cout << "unknown task for " << args_.target() << std::endl;
+        sync_cout() << "unknown task for " << args_.target() << std::endl;
         return;
     }
 

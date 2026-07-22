@@ -25,12 +25,19 @@ namespace {
   };
 }
 
-[[nodiscard]] std::vector<std::shared_ptr<Repository>>
+struct ParsedRepo {
+  size_t config_index;
+  std::shared_ptr<Repository> repo;
+};
+
+[[nodiscard]] std::vector<ParsedRepo>
 parse_config(const YAML::Node& config) {
-  std::vector<std::shared_ptr<Repository>> result;
+  std::vector<ParsedRepo> result;
   result.reserve(config.size());
 
-  for (const auto& node : config) {
+  for (size_t config_index = 0; const auto& node : config) {
+    const size_t current_index = config_index++;
+
     const auto& targetNode   = node["target"];
     const auto& taskNode     = node["task"];
     const auto& upstreamNode = node["upstream"];
@@ -64,7 +71,7 @@ parse_config(const YAML::Node& config) {
     }
 
     if (const auto it = VCSTYPE.find(vcs); it != VCSTYPE.end()) {
-      result.push_back(it->second(args, hash_str));
+      result.push_back({ current_index, it->second(args, hash_str) });
     } else {
       std::cout << "unknown vcs specified: " << vcs << ", ignoring" << std::endl;
     }
